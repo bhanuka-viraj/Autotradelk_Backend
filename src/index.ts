@@ -1,12 +1,18 @@
 import express, { Express } from 'express';
+import cors from 'cors';
 import { connectDB } from './config/database';
-import authRoutes from './routes/auth';
-import vehiclesRoutes from './routes/vehicles';
-import auctionsRoutes from './routes/auctions';
-import usersRoutes from './routes/users';
+import authRoutes from './routes/auth.routes';
+import vehiclesRoutes from './routes/vehicles.routes';
+import auctionsRoutes from './routes/auctions.routes';
+import usersRoutes from './routes/users.routes';
 
 const app: Express = express();
 
+app.use(cors({
+  origin: ['http://localhost:8080', 'http://localhost:3000'], 
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
@@ -23,6 +29,7 @@ const startServer = async () => {
     });
   } catch (error) {
     console.error('Server startup error:', error);
+    process.exit(1);
   }
 };
 
