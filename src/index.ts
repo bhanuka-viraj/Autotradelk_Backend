@@ -7,16 +7,13 @@ import usersRoutes from './routes/users';
 
 const app: Express = express();
 
-// Middleware
 app.use(express.json());
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/vehicles', vehiclesRoutes);
 app.use('/api/auctions', auctionsRoutes);
 app.use('/api/users', usersRoutes);
 
-// Start server
 const PORT = process.env.PORT || 3000;
 const startServer = async () => {
   try {

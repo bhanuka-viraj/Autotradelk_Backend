@@ -1,59 +1,71 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { User } from './User';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import { User } from "./User";
+import { Auction } from "./Auction";
 
 @Entity()
 export class Vehicle {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  title: string;
+  title!: string;
 
   @Column()
-  description: string;
+  description!: string;
 
   @Column()
-  brand: string;
+  brand!: string;
 
   @Column()
-  model: string;
+  model!: string;
 
   @Column()
-  year: number;
+  year!: number;
 
   @Column()
-  mileage: number;
+  mileage!: number;
 
   @Column()
-  color: string;
+  color!: string;
 
   @Column()
-  condition: string;
+  condition!: string;
 
-  @Column('decimal')
-  price: number;
-
-  @Column()
-  location: string;
+  @Column("decimal")
+  price!: number;
 
   @Column()
-  status: string;
+  location!: string;
 
-  @Column('json', { nullable: true })
-  aftermarketParts: string[] | null;
+  @Column()
+  status!: string;
 
-  @Column('json', { nullable: true })
-  missingParts: string[] | null;
+  @Column("json", { nullable: true })
+  aftermarketParts!: string[] | null;
 
-  @Column('simple-array')
-  images: string[];
+  @Column("json", { nullable: true })
+  missingParts!: string[] | null;
+
+  @Column("simple-array")
+  images!: string[];
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @ManyToOne(() => User, (user) => user.vehicles)
-  user: User;
+  user!: User;
+
+  @OneToMany(() => Auction, (auction) => auction.vehicle)
+  auctions!: Auction[];
 }

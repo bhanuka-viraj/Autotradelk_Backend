@@ -1,6 +1,6 @@
-import { In } from 'typeorm';
 import { AppDataSource } from '../config/database';
-import { Vehicle } from '../entities/vehicle';
+import { Vehicle } from '../entities/Vehicle';
+import { In } from 'typeorm';
 
 interface FindAllQuery {
   brand?: string;
@@ -11,9 +11,40 @@ interface FindAllQuery {
   limit?: number;
 }
 
+interface SearchQuery {
+  brand?: string;
+  model?: string;
+  priceMin?: number;
+  priceMax?: number;
+  location?: string;
+  mileageMax?: number;
+  color?: string;
+  condition?: string;
+  page?: number;
+  limit?: number;
+}
+
 interface FindAllResponse {
   data: Vehicle[];
   meta: { total: number; page: number; limit: number };
+}
+
+interface CreateVehicleData {
+  title: string;
+  description: string;
+  brand: string;
+  model: string;
+  year: number;
+  mileage: number;
+  color: string;
+  condition: string;
+  price: number;
+  location: string;
+  status: string;
+  aftermarketParts?: string[];
+  missingParts?: string[];
+  images: string[];
+  userId: number;
 }
 
 export class VehiclesService {
@@ -74,5 +105,61 @@ export class VehiclesService {
     const vehicles = await vehicleRepository.findBy({ id: In(ids) });
     if (vehicles.length !== ids.length) throw new Error('One or more vehicles not found');
     return vehicles;
+  }
+
+  async create(data: CreateVehicleData): Promise<Vehicle> {
+    const vehicleRepository = AppDataSource.getRepository(Vehicle);
+    const vehicle = vehicleRepository.create({
+      title: data.title,
+      description: data.description,
+      brand: data.brand,
+      model: data.model,
+      year: data.year,
+      mileage: data.mileage,
+      color: data.color,
+      condition: data.condition,
+      price: data.price,
+      location: data.location,
+      status: data.status,
+      aftermarketParts: data.aftermarketParts || null,
+      missingParts: data.missingParts || null,
+      images: data.images,
+      user: { id: data.userId },
+    });
+
+    await vehicleRepository.save(vehicle);
+    return vehicle;
+  }
+
+  async search({
+    brand,
+    model,
+    priceMin,
+    priceMax,
+    location,
+    mileageMax,
+    color,
+    condition,
+    page = 1,
+    limit = 10,
+  }: SearchQuery): Promise<FindAllResponse> {
+    const vehicleRepository = AppDataSource.getRepository(Vehicle);
+    const query = vehicleRepository
+      .createQueryBuilder('vehicle')
+      .where('vehicle.status = :status', { status: 'available' })
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (brand) query.andWhere('vehicle.brand = :brand', { brand });
+    if (model) query.andWhere('vehicle.model = :model', { model });
+    if (priceMin) query.andWhere('vehicle.price >= :priceMin', { priceMin });
+    if (priceMax) query.andWhere('vehicle.price <= :priceMax', { priceMax });
+    if (location) query.andWhere('vehicle.location = :location', { location });
+    if (mileageMax) query.andWhere('vehicle.mileage <= :mileageMax', { mileageMax });
+    if (color) query.andWhere('vehicle.color = :color', { color });
+    if (condition) query.andWhere('vehicle.condition = :condition', { condition });
+
+    const [vehicles, total] = await query.getManyAndCount();
+    return { data: vehicles, meta: { total, page, limit } };
   }
 }
