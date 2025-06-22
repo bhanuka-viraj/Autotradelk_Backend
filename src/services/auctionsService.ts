@@ -109,4 +109,23 @@ export class AuctionsService {
     await auctionRepository.save(auction);
     return auction;
   }
+
+  async getAuctionBids(auctionId: number): Promise<Bid[]> {
+    const bidRepository = AppDataSource.getRepository(Bid);
+
+    // First check if auction exists
+    const auctionRepository = AppDataSource.getRepository(Auction);
+    const auction = await auctionRepository.findOne({
+      where: { id: auctionId },
+    });
+    if (!auction) throw new Error("Auction not found");
+
+    const bids = await bidRepository.find({
+      where: { auction: { id: auctionId } },
+      relations: ["user"],
+      order: { amount: "DESC" }, // Highest bids first
+    });
+
+    return bids;
+  }
 }
