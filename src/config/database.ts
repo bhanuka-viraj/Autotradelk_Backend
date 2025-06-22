@@ -9,7 +9,7 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD || "postgres",
   database: process.env.DB_NAME || "autotradelk",
   entities: ["src/entities/*.ts"],
-  synchronize: true, // Auto-create tables (use false in production)
+  synchronize: true, 
   logging: true,
   ssl: false,
   extra: {

@@ -14,7 +14,7 @@ app.use('/api/vehicles', vehiclesRoutes);
 app.use('/api/auctions', auctionsRoutes);
 app.use('/api/users', usersRoutes);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const startServer = async () => {
   try {
     await connectDB();

@@ -6,8 +6,7 @@ interface AuthRequest extends Request {
 }
 
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  const token = req.headers.authorization?.split(' ')[1]; // Expect "Bearer <token>"
-
+  const token = req.headers.authorization?.split(' ')[1]; 
   if (!token) {
     res.status(401).json({ statusCode: 401, message: 'No token provided' });
     return;

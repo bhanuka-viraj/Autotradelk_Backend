@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { VehiclesController } from "../controllers/VehiclesController";
+import { VehiclesController } from "../controllers/vehiclesController";
 import { authMiddleware } from "../middleware/authMiddleWare";
 
 const router = Router();
