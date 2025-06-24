@@ -3,6 +3,7 @@ import { Auction } from "../entities/Auction";
 import { Bid } from "../entities/Bid";
 import { Vehicle } from "../entities/Vehicle";
 import { createServiceLogger } from "../utils/logger.util";
+import { getUserSelectFields } from "../utils/response.util";
 
 interface FindAllQuery {
   page?: number;
@@ -59,10 +60,21 @@ export class AuctionsService {
     this.logger.info("Find auction request", { auctionId: id });
 
     const auctionRepository = AppDataSource.getRepository(Auction);
-    const auction = await auctionRepository.findOne({
-      where: { id },
-      relations: ["vehicle", "user", "bids", "bids.user"],
-    });
+    const auction = await auctionRepository
+      .createQueryBuilder("auction")
+      .leftJoinAndSelect("auction.vehicle", "vehicle")
+      .leftJoinAndSelect("auction.user", "user")
+      .leftJoinAndSelect("auction.bids", "bids")
+      .leftJoinAndSelect("bids.user", "bidUser")
+      .select([
+        "auction",
+        "vehicle",
+        ...getUserSelectFields("user"),
+        "bids",
+        ...getUserSelectFields("bidUser"),
+      ])
+      .where("auction.id = :id", { id })
+      .getOne();
 
     if (!auction) {
       this.logger.warn("Auction not found", { auctionId: id });
@@ -155,10 +167,13 @@ export class AuctionsService {
     const auctionRepository = AppDataSource.getRepository(Auction);
     const vehicleRepository = AppDataSource.getRepository(Vehicle);
 
-    const vehicle = await vehicleRepository.findOne({
-      where: { id: data.vehicleId },
-      relations: ["user", "auctions"],
-    });
+    const vehicle = await vehicleRepository
+      .createQueryBuilder("vehicle")
+      .leftJoinAndSelect("vehicle.user", "user")
+      .leftJoinAndSelect("vehicle.auctions", "auctions")
+      .select(["vehicle", "auctions", ...getUserSelectFields("user")])
+      .where("vehicle.id = :vehicleId", { vehicleId: data.vehicleId })
+      .getOne();
 
     if (!vehicle) {
       this.logger.warn("Vehicle not found for auction creation", {
@@ -219,11 +234,13 @@ export class AuctionsService {
       throw new Error("Auction not found");
     }
 
-    const bids = await bidRepository.find({
-      where: { auction: { id: auctionId } },
-      relations: ["user"],
-      order: { amount: "DESC" }, // Highest bids first
-    });
+    const bids = await bidRepository
+      .createQueryBuilder("bid")
+      .leftJoinAndSelect("bid.user", "user")
+      .select(["bid", ...getUserSelectFields("user")])
+      .where("bid.auction.id = :auctionId", { auctionId })
+      .orderBy("bid.amount", "DESC")
+      .getMany();
 
     this.logger.info("Auction bids retrieved successfully", {
       auctionId,

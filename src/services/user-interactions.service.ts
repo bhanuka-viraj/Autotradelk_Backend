@@ -92,8 +92,8 @@ export class UserInteractionsService {
     interactions.forEach((interaction) => {
       if (interaction.vehicle) {
         // Count brands
-        brandCounts[interaction.vehicle.brand] =
-          (brandCounts[interaction.vehicle.brand] || 0) + 1;
+        brandCounts[interaction.vehicle.brand.name] =
+          (brandCounts[interaction.vehicle.brand.name] || 0) + 1;
 
         // Count models
         modelCounts[interaction.vehicle.model] =

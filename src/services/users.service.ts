@@ -3,6 +3,7 @@ import { User } from "../entities/User";
 import { Vehicle } from "../entities/Vehicle";
 import { Bid } from "../entities/Bid";
 import { createServiceLogger } from "../utils/logger.util";
+import { getUserSelectFields } from "../utils/response.util";
 
 export class UsersService {
   private logger = createServiceLogger("UsersService");
@@ -11,7 +12,11 @@ export class UsersService {
     this.logger.info("Get user request", { userId: id, requestingUserId });
 
     const userRepository = AppDataSource.getRepository(User);
-    const user = await userRepository.findOne({ where: { id } });
+    const user = await userRepository
+      .createQueryBuilder("user")
+      .select(getUserSelectFields())
+      .where("user.id = :id", { id })
+      .getOne();
 
     if (!user) {
       this.logger.warn("User not found", { userId: id });

@@ -5,7 +5,7 @@ import { Auction } from "../entities/Auction";
 import { Bid } from "../entities/Bid";
 import { Brand } from "../entities/Brand";
 import { Category } from "../entities/Category";
-import { VehicleCategory } from "../entities/VehicleCategory";
+import { UserInteraction, InteractionType } from "../entities/UserInteraction";
 import * as bcrypt from "bcrypt";
 import { createServiceLogger } from "../utils/logger.util";
 
@@ -62,6 +62,11 @@ const brands = [
   { name: "tesla", displayName: "Tesla", countryOfOrigin: "USA" },
   { name: "rivian", displayName: "Rivian", countryOfOrigin: "USA" },
   { name: "lucid", displayName: "Lucid", countryOfOrigin: "USA" },
+  {
+    name: "harley-davidson",
+    displayName: "Harley-Davidson",
+    countryOfOrigin: "USA",
+  },
   { name: "polestar", displayName: "Polestar", countryOfOrigin: "Sweden" },
   { name: "nio", displayName: "NIO", countryOfOrigin: "China" },
   { name: "xpeng", displayName: "XPeng", countryOfOrigin: "China" },
@@ -319,6 +324,7 @@ const vehicles = [
     description:
       "Excellent condition Toyota Camry with low mileage. Well maintained with full service history.",
     brandName: "toyota", // We'll map this to brandId
+    categoryName: "Cars", // We'll map this to categoryId
     model: "Camry",
     year: 2019,
     mileage: 45000,
@@ -338,13 +344,13 @@ const vehicles = [
     aftermarketParts: ["LED Headlights", "Custom Wheels"],
     missingParts: null,
     images: ["camry1.jpg", "camry2.jpg", "camry3.jpg"],
-    categoryNames: ["Cars"], // We'll map this to categoryIds
   },
   {
     title: "2020 Honda Civic Sport",
     description:
       "Sporty Honda Civic with great fuel efficiency. Perfect for daily commuting.",
     brandName: "honda",
+    categoryName: "Sports & Performance",
     model: "Civic",
     year: 2020,
     mileage: 32000,
@@ -364,13 +370,13 @@ const vehicles = [
     aftermarketParts: ["Sport Exhaust", "Lowering Springs"],
     missingParts: null,
     images: ["civic1.jpg", "civic2.jpg"],
-    categoryNames: ["Cars", "Sports & Performance"],
   },
   {
     title: "2018 BMW 3 Series",
     description:
       "Luxury BMW 3 Series with premium features. Leather interior and advanced technology.",
     brandName: "bmw",
+    categoryName: "Luxury Vehicles",
     model: "3 Series",
     year: 2018,
     mileage: 55000,
@@ -390,13 +396,13 @@ const vehicles = [
     aftermarketParts: ["M Sport Package", "Premium Sound System"],
     missingParts: null,
     images: ["bmw1.jpg", "bmw2.jpg", "bmw3.jpg", "bmw4.jpg"],
-    categoryNames: ["Cars", "Luxury Vehicles"],
   },
   {
     title: "2021 Ford Mustang GT",
     description:
       "Powerful Ford Mustang GT with V8 engine. Perfect for car enthusiasts.",
     brandName: "ford",
+    categoryName: "Sports & Performance",
     model: "Mustang",
     year: 2021,
     mileage: 18000,
@@ -420,13 +426,13 @@ const vehicles = [
     ],
     missingParts: null,
     images: ["mustang1.jpg", "mustang2.jpg"],
-    categoryNames: ["Cars", "Sports & Performance"],
   },
   {
     title: "2017 Audi A4",
     description:
       "Elegant Audi A4 with quattro all-wheel drive. Premium German engineering.",
     brandName: "audi",
+    categoryName: "Luxury Vehicles",
     model: "A4",
     year: 2017,
     mileage: 68000,
@@ -446,13 +452,13 @@ const vehicles = [
     aftermarketParts: ["S-Line Package"],
     missingParts: null,
     images: ["audi1.jpg", "audi2.jpg", "audi3.jpg"],
-    categoryNames: ["Cars", "Luxury Vehicles"],
   },
   {
     title: "2019 Mercedes-Benz C-Class",
     description:
       "Luxury Mercedes C-Class with advanced safety features and comfort.",
     brandName: "mercedes-benz",
+    categoryName: "Luxury Vehicles",
     model: "C-Class",
     year: 2019,
     mileage: 42000,
@@ -472,7 +478,110 @@ const vehicles = [
     aftermarketParts: ["AMG Line Package", "Panoramic Sunroof"],
     missingParts: null,
     images: ["mercedes1.jpg", "mercedes2.jpg"],
-    categoryNames: ["Cars", "Luxury Vehicles"],
+  },
+  {
+    title: "2020 Tesla Model 3",
+    description:
+      "Electric Tesla Model 3 with autopilot. Zero emissions and cutting-edge technology.",
+    brandName: "tesla",
+    categoryName: "Electric Vehicles",
+    model: "Model 3",
+    year: 2020,
+    mileage: 25000,
+    color: "White",
+    condition: "Excellent",
+    price: 42000,
+    location: "San Francisco, CA",
+    status: "available",
+    engineSize: "Dual Motor",
+    fuelType: "Electric",
+    transmission: "Single Speed",
+    bodyStyle: "Sedan",
+    doors: 4,
+    seats: 5,
+    vin: "5YJ3E1EA4JF123456",
+    registrationNumber: "PQR678",
+    aftermarketParts: ["Premium Interior", "Autopilot"],
+    missingParts: null,
+    images: ["tesla1.jpg", "tesla2.jpg", "tesla3.jpg"],
+  },
+  {
+    title: "2016 Jeep Wrangler Unlimited",
+    description:
+      "Rugged Jeep Wrangler Unlimited perfect for off-road adventures.",
+    brandName: "jeep",
+    categoryName: "Off-Road Vehicles",
+    model: "Wrangler",
+    year: 2016,
+    mileage: 75000,
+    color: "Green",
+    condition: "Good",
+    price: 32000,
+    location: "Denver, CO",
+    status: "available",
+    engineSize: "3.6L V6",
+    fuelType: "Gasoline",
+    transmission: "Manual",
+    bodyStyle: "SUV",
+    doors: 4,
+    seats: 5,
+    vin: "1C4BJWDG8GL123456",
+    registrationNumber: "STU901",
+    aftermarketParts: ["Lift Kit", "Off-Road Tires", "Winch"],
+    missingParts: null,
+    images: ["jeep1.jpg", "jeep2.jpg"],
+  },
+  {
+    title: "2018 Porsche 911 Carrera",
+    description:
+      "Iconic Porsche 911 Carrera with exceptional performance and handling.",
+    brandName: "porsche",
+    categoryName: "Sports & Performance",
+    model: "911",
+    year: 2018,
+    mileage: 15000,
+    color: "Black",
+    condition: "Excellent",
+    price: 85000,
+    location: "Los Angeles, CA",
+    status: "available",
+    engineSize: "3.0L Turbo",
+    fuelType: "Gasoline",
+    transmission: "PDK",
+    bodyStyle: "Coupe",
+    doors: 2,
+    seats: 4,
+    vin: "WP0AB2A91JS123456",
+    registrationNumber: "VWX234",
+    aftermarketParts: ["Sport Chrono Package", "Premium Sound System"],
+    missingParts: null,
+    images: ["porsche1.jpg", "porsche2.jpg", "porsche3.jpg"],
+  },
+  {
+    title: "2015 Harley-Davidson Street Glide",
+    description:
+      "Classic Harley-Davidson Street Glide motorcycle with custom paint.",
+    brandName: "harley-davidson",
+    categoryName: "Motorcycles",
+    model: "Street Glide",
+    year: 2015,
+    mileage: 12000,
+    color: "Black",
+    condition: "Good",
+    price: 18000,
+    location: "Austin, TX",
+    status: "available",
+    engineSize: "103ci",
+    fuelType: "Gasoline",
+    transmission: "6-Speed",
+    bodyStyle: "Touring",
+    doors: 0,
+    seats: 2,
+    vin: "1HD1KPM15EB123456",
+    registrationNumber: "YZ1234",
+    aftermarketParts: ["Custom Exhaust", "LED Lighting"],
+    missingParts: null,
+    images: ["harley1.jpg", "harley2.jpg"],
   },
 ];
 
@@ -489,8 +598,8 @@ async function seedDatabase() {
     const bidRepository = AppDataSource.getRepository(Bid);
     const brandRepository = AppDataSource.getRepository(Brand);
     const categoryRepository = AppDataSource.getRepository(Category);
-    const vehicleCategoryRepository =
-      AppDataSource.getRepository(VehicleCategory);
+    const userInteractionRepository =
+      AppDataSource.getRepository(UserInteraction);
 
     // Clear existing data in correct order (respecting foreign key constraints)
     logger.info("Clearing existing data...");
@@ -498,7 +607,7 @@ async function seedDatabase() {
     // Use CASCADE to clear all related data at once
     try {
       await AppDataSource.query(
-        'TRUNCATE TABLE "bid", "auction", "vehicle_category", "vehicle", "user_interaction", "user", "category", "brand" CASCADE'
+        'TRUNCATE TABLE "bid", "auction", "vehicle", "user_interaction", "user", "category", "brand" CASCADE'
       );
       logger.info("Cleared all existing data");
     } catch (error) {
@@ -519,16 +628,16 @@ async function seedDatabase() {
         logger.info("Cleared auctions");
       }
 
-      const vehicleCategoryCount = await vehicleCategoryRepository.count();
-      if (vehicleCategoryCount > 0) {
-        await vehicleCategoryRepository.clear();
-        logger.info("Cleared vehicle categories");
-      }
-
       const vehicleCount = await vehicleRepository.count();
       if (vehicleCount > 0) {
         await vehicleRepository.clear();
         logger.info("Cleared vehicles");
+      }
+
+      const userInteractionCount = await userInteractionRepository.count();
+      if (userInteractionCount > 0) {
+        await userInteractionRepository.clear();
+        logger.info("Cleared user interactions");
       }
 
       const userCount = await userRepository.count();
@@ -592,16 +701,24 @@ async function seedDatabase() {
       logger.info(`Created user: ${savedUser.name}`);
     }
 
-    // Create vehicles with proper brand relationships
+    // Create vehicles with proper brand and category relationships
     logger.info("Creating vehicles...");
     const createdVehicles = [];
     for (let i = 0; i < vehicles.length; i++) {
       const vehicleData = vehicles[i];
       const brand = brandMap.get(vehicleData.brandName);
+      const category = categoryMap.get(vehicleData.categoryName);
 
       if (!brand) {
         logger.warn(
           `Brand not found: ${vehicleData.brandName}, skipping vehicle: ${vehicleData.title}`
+        );
+        continue;
+      }
+
+      if (!category) {
+        logger.warn(
+          `Category not found: ${vehicleData.categoryName}, skipping vehicle: ${vehicleData.title}`
         );
         continue;
       }
@@ -629,27 +746,15 @@ async function seedDatabase() {
         missingParts: vehicleData.missingParts,
         images: vehicleData.images,
         brand: brand,
+        category: category,
         user: createdUsers[i % createdUsers.length], // Distribute vehicles among users
       });
 
       const savedVehicle = await vehicleRepository.save(vehicle);
       createdVehicles.push(savedVehicle);
-      logger.info(`Created vehicle: ${savedVehicle.title}`);
-
-      // Create vehicle-category relationships
-      for (const categoryName of vehicleData.categoryNames) {
-        const category = categoryMap.get(categoryName);
-        if (category) {
-          const vehicleCategory = vehicleCategoryRepository.create({
-            vehicle: savedVehicle,
-            category: category,
-          });
-          await vehicleCategoryRepository.save(vehicleCategory);
-          logger.info(
-            `Assigned category '${categoryName}' to vehicle: ${savedVehicle.title}`
-          );
-        }
-      }
+      logger.info(
+        `Created vehicle: ${savedVehicle.title} (Brand: ${brand.displayName}, Category: ${category.name})`
+      );
     }
 
     // Create auctions
@@ -730,9 +835,6 @@ async function seedDatabase() {
 
     // Seed UserInteractions
     logger.info("Creating user interactions...");
-    const userInteractionRepository =
-      AppDataSource.getRepository("UserInteraction");
-    const interactionTypes = ["view", "search", "bid", "favorite", "compare"];
     const userInteractions = [];
     for (let i = 0; i < createdUsers.length; i++) {
       for (let j = 0; j < createdVehicles.length; j++) {
@@ -740,20 +842,20 @@ async function seedDatabase() {
         userInteractions.push({
           userId: createdUsers[i].id,
           vehicleId: createdVehicles[j].id,
-          interactionType: "view",
+          interactionType: InteractionType.VIEW,
           metadata: { duration: Math.floor(Math.random() * 120) + 10 },
         });
         userInteractions.push({
           userId: createdUsers[i].id,
           vehicleId: createdVehicles[j].id,
-          interactionType: "favorite",
+          interactionType: InteractionType.FAVORITE,
           metadata: {},
         });
       }
       // Each user does a search
       userInteractions.push({
         userId: createdUsers[i].id,
-        interactionType: "search",
+        interactionType: InteractionType.SEARCH,
         metadata: {
           searchQuery: "sedan",
           priceRange: { min: 20000, max: 40000 },

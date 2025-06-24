@@ -15,16 +15,17 @@ router.get(
   vehiclesController.getUserSpecificSuggestions.bind(vehiclesController)
 );
 
-router.get("/:id", vehiclesController.getOne.bind(vehiclesController));
-router.get(
-  "/:id/suggestions",
-  vehiclesController.getSuggestions.bind(vehiclesController)
-);
-
 router.post(
   "/",
   authMiddleware,
   vehiclesController.create.bind(vehiclesController)
+);
+
+// Parameterized routes must come after specific routes
+router.get("/:id", vehiclesController.getOne.bind(vehiclesController));
+router.get(
+  "/:id/suggestions",
+  vehiclesController.getSuggestions.bind(vehiclesController)
 );
 
 export default router;

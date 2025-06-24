@@ -4,6 +4,7 @@ import cors from "cors";
 import { connectDB } from "./config/database.config";
 import { createServiceLogger } from "./utils/logger.util";
 import morganMiddleware from "./middleware/logger.middleware";
+import { errorHandler } from "./middleware/error.middleware";
 import authRoutes from "./routes/auth.routes";
 import vehiclesRoutes from "./routes/vehicles.routes";
 import auctionsRoutes from "./routes/auctions.routes";
@@ -32,6 +33,26 @@ app.use("/api/auctions", auctionsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/brands", brandsRoutes);
 app.use("/api/categories", categoriesRoutes);
+
+// 404 Handler - must be after all routes
+app.use((req, res) => {
+  logger.warn("Route not found", {
+    url: req.url,
+    method: req.method,
+  });
+
+  res.status(404).json({
+    success: false,
+    error: {
+      code: "NOT_FOUND",
+      message: "Route not found",
+      timestamp: new Date().toISOString(),
+    },
+  });
+});
+
+// Global Error Handler - must be last
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 8080;
 const startServer = async () => {

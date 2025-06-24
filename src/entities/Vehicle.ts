@@ -10,7 +10,7 @@ import {
 import { User } from "./User";
 import { Auction } from "./Auction";
 import { Brand } from "./Brand";
-import { VehicleCategory } from "./VehicleCategory";
+import { Category } from "./Category";
 
 @Entity()
 export class Vehicle {
@@ -93,12 +93,9 @@ export class Vehicle {
   @ManyToOne(() => Brand, (brand) => brand.vehicles)
   brand!: Brand;
 
+  @ManyToOne(() => Category, (category) => category.vehicles)
+  category!: Category;
+
   @OneToMany(() => Auction, (auction) => auction.vehicle)
   auctions!: Auction[];
-
-  @OneToMany(
-    () => VehicleCategory,
-    (vehicleCategory) => vehicleCategory.vehicle
-  )
-  vehicleCategories!: VehicleCategory[];
 }

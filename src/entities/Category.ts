@@ -7,7 +7,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from "typeorm";
-import { VehicleCategory } from "./VehicleCategory";
+import { Vehicle } from "./Vehicle";
 
 @Entity()
 export class Category {
@@ -47,9 +47,6 @@ export class Category {
   @OneToMany(() => Category, (category) => category.parent)
   children!: Category[];
 
-  @OneToMany(
-    () => VehicleCategory,
-    (vehicleCategory) => vehicleCategory.category
-  )
-  vehicleCategories!: VehicleCategory[];
+  @OneToMany(() => Vehicle, (vehicle) => vehicle.category)
+  vehicles!: Vehicle[];
 }

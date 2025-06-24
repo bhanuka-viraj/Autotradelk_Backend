@@ -3,10 +3,12 @@ import { Vehicle } from "../entities/Vehicle";
 import { In } from "typeorm";
 import { createServiceLogger } from "../utils/logger.util";
 import { UserInteractionsService } from "./user-interactions.service";
+import { ApiError, getUserSelectFields } from "../utils/response.util";
+import { User } from "../entities/User";
 
 interface FindAllQuery {
   brandId?: number;
-  categoryIds?: number[];
+  categoryId?: number;
   priceMin?: number;
   priceMax?: number;
   location?: string;
@@ -16,7 +18,7 @@ interface FindAllQuery {
 
 interface SearchQuery {
   brandId?: number;
-  categoryIds?: number[];
+  categoryId?: number;
   model?: string;
   priceMin?: number;
   priceMax?: number;
@@ -42,6 +44,7 @@ interface CreateVehicleData {
   title: string;
   description: string;
   brandId: number;
+  categoryId: number;
   model: string;
   year: number;
   mileage: number;
@@ -61,7 +64,6 @@ interface CreateVehicleData {
   aftermarketParts?: string[];
   missingParts?: string[];
   images: string[];
-  categoryIds?: number[];
   userId: number;
 }
 
@@ -71,7 +73,7 @@ export class VehiclesService {
 
   async findAll({
     brandId,
-    categoryIds,
+    categoryId,
     priceMin,
     priceMax,
     location,
@@ -80,7 +82,7 @@ export class VehiclesService {
   }: FindAllQuery): Promise<FindAllResponse> {
     this.logger.info("Find all vehicles request", {
       brandId,
-      categoryIds,
+      categoryId,
       priceMin,
       priceMax,
       location,
@@ -92,16 +94,14 @@ export class VehiclesService {
     const query = vehicleRepository
       .createQueryBuilder("vehicle")
       .leftJoinAndSelect("vehicle.brand", "brand")
-      .leftJoinAndSelect("vehicle.vehicleCategories", "vehicleCategory")
-      .leftJoinAndSelect("vehicleCategory.category", "category")
+      .leftJoinAndSelect("vehicle.category", "category")
       .where("vehicle.status = :status", { status: "available" })
       .skip((page - 1) * limit)
       .take(limit);
 
     if (brandId) query.andWhere("vehicle.brandId = :brandId", { brandId });
-    if (categoryIds && categoryIds.length > 0) {
-      query.andWhere("category.id IN (:...categoryIds)", { categoryIds });
-    }
+    if (categoryId)
+      query.andWhere("vehicle.categoryId = :categoryId", { categoryId });
     if (priceMin) query.andWhere("vehicle.price >= :priceMin", { priceMin });
     if (priceMax) query.andWhere("vehicle.price <= :priceMax", { priceMax });
     if (location) query.andWhere("vehicle.location = :location", { location });
@@ -122,19 +122,20 @@ export class VehiclesService {
     this.logger.info("Find vehicle request", { vehicleId: id });
 
     const vehicleRepository = AppDataSource.getRepository(Vehicle);
-    const vehicle = await vehicleRepository.findOne({
-      where: { id },
-      relations: [
-        "user",
-        "brand",
-        "vehicleCategories",
-        "vehicleCategories.category",
-      ],
-    });
+
+    // Use TypeORM's select option to exclude password at query level
+    const vehicle = await vehicleRepository
+      .createQueryBuilder("vehicle")
+      .leftJoinAndSelect("vehicle.brand", "brand")
+      .leftJoinAndSelect("vehicle.category", "category")
+      .leftJoinAndSelect("vehicle.user", "user")
+      .select(["vehicle", "brand", "category", ...getUserSelectFields()])
+      .where("vehicle.id = :id", { id })
+      .getOne();
 
     if (!vehicle) {
       this.logger.warn("Vehicle not found", { vehicleId: id });
-      throw new Error("Vehicle not found");
+      throw ApiError.notFound("Vehicle");
     }
 
     this.logger.info("Vehicle retrieved successfully", { vehicleId: id });
@@ -153,12 +154,12 @@ export class VehiclesService {
     const vehicleRepository = AppDataSource.getRepository(Vehicle);
     const vehicle = await vehicleRepository.findOne({
       where: { id },
-      relations: ["brand", "vehicleCategories", "vehicleCategories.category"],
+      relations: ["brand", "category"],
     });
 
     if (!vehicle) {
       this.logger.warn("Vehicle not found for suggestions", { vehicleId: id });
-      throw new Error("Vehicle not found");
+      throw ApiError.notFound("Vehicle");
     }
 
     const priceRange = {
@@ -169,8 +170,7 @@ export class VehiclesService {
     const suggestions = await vehicleRepository
       .createQueryBuilder("vehicle")
       .leftJoinAndSelect("vehicle.brand", "brand")
-      .leftJoinAndSelect("vehicle.vehicleCategories", "vehicleCategory")
-      .leftJoinAndSelect("vehicleCategory.category", "category")
+      .leftJoinAndSelect("vehicle.category", "category")
       .where("vehicle.id != :id", { id })
       .andWhere("vehicle.status = :status", { status: "available" })
       .andWhere("vehicle.price BETWEEN :min AND :max", {
@@ -350,14 +350,21 @@ export class VehiclesService {
     this.logger.info("Compare vehicles request", { vehicleIds: ids });
 
     const vehicleRepository = AppDataSource.getRepository(Vehicle);
-    const vehicles = await vehicleRepository.findBy({ id: In(ids) });
+    const vehicles = await vehicleRepository
+      .createQueryBuilder("vehicle")
+      .leftJoinAndSelect("vehicle.brand", "brand")
+      .leftJoinAndSelect("vehicle.category", "category")
+      .leftJoinAndSelect("vehicle.user", "user")
+      .select(["vehicle", "brand", "category", ...getUserSelectFields()])
+      .where("vehicle.id IN (:...ids)", { ids })
+      .getMany();
 
     if (vehicles.length !== ids.length) {
       this.logger.warn("One or more vehicles not found for comparison", {
         requestedIds: ids,
         foundIds: vehicles.map((v) => v.id),
       });
-      throw new Error("One or more vehicles not found");
+      throw ApiError.notFound("One or more vehicles");
     }
 
     this.logger.info("Vehicle comparison completed successfully", {
@@ -371,14 +378,17 @@ export class VehiclesService {
     this.logger.info("Create vehicle request", {
       userId: data.userId,
       brandId: data.brandId,
+      categoryId: data.categoryId,
       model: data.model,
     });
 
     const vehicleRepository = AppDataSource.getRepository(Vehicle);
+
     const vehicle = vehicleRepository.create({
       title: data.title,
       description: data.description,
       brand: { id: data.brandId },
+      category: { id: data.categoryId },
       model: data.model,
       year: data.year,
       mileage: data.mileage,
@@ -406,6 +416,7 @@ export class VehiclesService {
     this.logger.info("Vehicle created successfully", {
       vehicleId: vehicle.id,
       userId: data.userId,
+      categoryId: data.categoryId,
     });
 
     return vehicle;
@@ -413,7 +424,7 @@ export class VehiclesService {
 
   async search({
     brandId,
-    categoryIds,
+    categoryId,
     model,
     priceMin,
     priceMax,
@@ -431,7 +442,7 @@ export class VehiclesService {
   }: SearchQuery): Promise<FindAllResponse> {
     this.logger.info("Search vehicles request", {
       brandId,
-      categoryIds,
+      categoryId,
       model,
       priceMin,
       priceMax,
@@ -452,16 +463,14 @@ export class VehiclesService {
     const query = vehicleRepository
       .createQueryBuilder("vehicle")
       .leftJoinAndSelect("vehicle.brand", "brand")
-      .leftJoinAndSelect("vehicle.vehicleCategories", "vehicleCategory")
-      .leftJoinAndSelect("vehicleCategory.category", "category")
+      .leftJoinAndSelect("vehicle.category", "category")
       .where("vehicle.status = :status", { status: "available" })
       .skip((page - 1) * limit)
       .take(limit);
 
     if (brandId) query.andWhere("vehicle.brandId = :brandId", { brandId });
-    if (categoryIds && categoryIds.length > 0) {
-      query.andWhere("category.id IN (:...categoryIds)", { categoryIds });
-    }
+    if (categoryId)
+      query.andWhere("vehicle.categoryId = :categoryId", { categoryId });
     if (model) query.andWhere("vehicle.model = :model", { model });
     if (priceMin) query.andWhere("vehicle.price >= :priceMin", { priceMin });
     if (priceMax) query.andWhere("vehicle.price <= :priceMax", { priceMax });

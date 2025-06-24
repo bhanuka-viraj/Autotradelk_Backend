@@ -28,7 +28,7 @@ export class CategoriesService {
   async getById(id: number): Promise<Category | null> {
     return await this.categoryRepository.findOne({
       where: { id, isActive: true },
-      relations: ["children", "parent", "vehicleCategories"],
+      relations: ["children", "parent"],
     });
   }
 
@@ -91,9 +91,9 @@ export class CategoriesService {
   async getPopularCategories(limit: number = 10): Promise<Category[]> {
     return await this.categoryRepository
       .createQueryBuilder("category")
-      .leftJoin("category.vehicleCategories", "vehicleCategory")
+      .leftJoin("category.vehicles", "vehicle")
       .select("category")
-      .addSelect("COUNT(vehicleCategory.id)", "vehicleCount")
+      .addSelect("COUNT(vehicle.id)", "vehicleCount")
       .where("category.isActive = :isActive", { isActive: true })
       .groupBy("category.id")
       .orderBy("vehicleCount", "DESC")
