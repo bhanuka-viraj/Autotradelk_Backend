@@ -3,7 +3,272 @@ import { User } from "../entities/User";
 import { Vehicle } from "../entities/Vehicle";
 import { Auction } from "../entities/Auction";
 import { Bid } from "../entities/Bid";
+import { Brand } from "../entities/Brand";
+import { Category } from "../entities/Category";
+import { VehicleCategory } from "../entities/VehicleCategory";
 import * as bcrypt from "bcrypt";
+import { createServiceLogger } from "../utils/logger.util";
+
+const logger = createServiceLogger("DatabaseSeed");
+
+// Brand data
+const brands = [
+  { name: "toyota", displayName: "Toyota", countryOfOrigin: "Japan" },
+  { name: "honda", displayName: "Honda", countryOfOrigin: "Japan" },
+  { name: "nissan", displayName: "Nissan", countryOfOrigin: "Japan" },
+  { name: "mazda", displayName: "Mazda", countryOfOrigin: "Japan" },
+  { name: "subaru", displayName: "Subaru", countryOfOrigin: "Japan" },
+  { name: "mitsubishi", displayName: "Mitsubishi", countryOfOrigin: "Japan" },
+  { name: "ford", displayName: "Ford", countryOfOrigin: "USA" },
+  { name: "chevrolet", displayName: "Chevrolet", countryOfOrigin: "USA" },
+  { name: "dodge", displayName: "Dodge", countryOfOrigin: "USA" },
+  { name: "jeep", displayName: "Jeep", countryOfOrigin: "USA" },
+  { name: "cadillac", displayName: "Cadillac", countryOfOrigin: "USA" },
+  { name: "buick", displayName: "Buick", countryOfOrigin: "USA" },
+  { name: "bmw", displayName: "BMW", countryOfOrigin: "Germany" },
+  {
+    name: "mercedes-benz",
+    displayName: "Mercedes-Benz",
+    countryOfOrigin: "Germany",
+  },
+  { name: "audi", displayName: "Audi", countryOfOrigin: "Germany" },
+  { name: "volkswagen", displayName: "Volkswagen", countryOfOrigin: "Germany" },
+  { name: "porsche", displayName: "Porsche", countryOfOrigin: "Germany" },
+  { name: "volvo", displayName: "Volvo", countryOfOrigin: "Sweden" },
+  { name: "saab", displayName: "Saab", countryOfOrigin: "Sweden" },
+  { name: "fiat", displayName: "Fiat", countryOfOrigin: "Italy" },
+  { name: "alfa-romeo", displayName: "Alfa Romeo", countryOfOrigin: "Italy" },
+  { name: "ferrari", displayName: "Ferrari", countryOfOrigin: "Italy" },
+  { name: "lamborghini", displayName: "Lamborghini", countryOfOrigin: "Italy" },
+  { name: "maserati", displayName: "Maserati", countryOfOrigin: "Italy" },
+  { name: "peugeot", displayName: "Peugeot", countryOfOrigin: "France" },
+  { name: "renault", displayName: "Renault", countryOfOrigin: "France" },
+  { name: "citroen", displayName: "Citroën", countryOfOrigin: "France" },
+  { name: "hyundai", displayName: "Hyundai", countryOfOrigin: "South Korea" },
+  { name: "kia", displayName: "Kia", countryOfOrigin: "South Korea" },
+  {
+    name: "ssangyong",
+    displayName: "SsangYong",
+    countryOfOrigin: "South Korea",
+  },
+  { name: "land-rover", displayName: "Land Rover", countryOfOrigin: "UK" },
+  { name: "jaguar", displayName: "Jaguar", countryOfOrigin: "UK" },
+  { name: "mini", displayName: "MINI", countryOfOrigin: "UK" },
+  { name: "rolls-royce", displayName: "Rolls-Royce", countryOfOrigin: "UK" },
+  { name: "bentley", displayName: "Bentley", countryOfOrigin: "UK" },
+  { name: "aston-martin", displayName: "Aston Martin", countryOfOrigin: "UK" },
+  { name: "mclaren", displayName: "McLaren", countryOfOrigin: "UK" },
+  { name: "lotus", displayName: "Lotus", countryOfOrigin: "UK" },
+  { name: "tesla", displayName: "Tesla", countryOfOrigin: "USA" },
+  { name: "rivian", displayName: "Rivian", countryOfOrigin: "USA" },
+  { name: "lucid", displayName: "Lucid", countryOfOrigin: "USA" },
+  { name: "polestar", displayName: "Polestar", countryOfOrigin: "Sweden" },
+  { name: "nio", displayName: "NIO", countryOfOrigin: "China" },
+  { name: "xpeng", displayName: "XPeng", countryOfOrigin: "China" },
+  { name: "byd", displayName: "BYD", countryOfOrigin: "China" },
+  { name: "geely", displayName: "Geely", countryOfOrigin: "China" },
+  { name: "great-wall", displayName: "Great Wall", countryOfOrigin: "China" },
+  { name: "changan", displayName: "Changan", countryOfOrigin: "China" },
+  { name: "haval", displayName: "Haval", countryOfOrigin: "China" },
+  { name: "mg", displayName: "MG", countryOfOrigin: "China" },
+  { name: "roewe", displayName: "Roewe", countryOfOrigin: "China" },
+  { name: "maxus", displayName: "Maxus", countryOfOrigin: "China" },
+  { name: "wuling", displayName: "Wuling", countryOfOrigin: "China" },
+  { name: "hongqi", displayName: "Hongqi", countryOfOrigin: "China" },
+  { name: "lynk-co", displayName: "Lynk & Co", countryOfOrigin: "China" },
+  { name: "zeekr", displayName: "Zeekr", countryOfOrigin: "China" },
+  { name: "smart", displayName: "Smart", countryOfOrigin: "Germany" },
+  { name: "opel", displayName: "Opel", countryOfOrigin: "Germany" },
+  { name: "skoda", displayName: "Škoda", countryOfOrigin: "Czech Republic" },
+  { name: "seat", displayName: "SEAT", countryOfOrigin: "Spain" },
+  { name: "dacia", displayName: "Dacia", countryOfOrigin: "Romania" },
+  { name: "lada", displayName: "Lada", countryOfOrigin: "Russia" },
+  { name: "uaz", displayName: "UAZ", countryOfOrigin: "Russia" },
+  { name: "gaz", displayName: "GAZ", countryOfOrigin: "Russia" },
+  { name: "zaz", displayName: "ZAZ", countryOfOrigin: "Ukraine" },
+  { name: "tata", displayName: "Tata", countryOfOrigin: "India" },
+  { name: "mahindra", displayName: "Mahindra", countryOfOrigin: "India" },
+  {
+    name: "maruti-suzuki",
+    displayName: "Maruti Suzuki",
+    countryOfOrigin: "India",
+  },
+  { name: "hindustan", displayName: "Hindustan", countryOfOrigin: "India" },
+  { name: "force", displayName: "Force", countryOfOrigin: "India" },
+  {
+    name: "ashok-leyland",
+    displayName: "Ashok Leyland",
+    countryOfOrigin: "India",
+  },
+  { name: "bajaj", displayName: "Bajaj", countryOfOrigin: "India" },
+  { name: "hero", displayName: "Hero", countryOfOrigin: "India" },
+  { name: "tvs", displayName: "TVS", countryOfOrigin: "India" },
+  {
+    name: "royal-enfield",
+    displayName: "Royal Enfield",
+    countryOfOrigin: "India",
+  },
+  { name: "yamaha", displayName: "Yamaha", countryOfOrigin: "Japan" },
+  { name: "suzuki", displayName: "Suzuki", countryOfOrigin: "Japan" },
+  { name: "kawasaki", displayName: "Kawasaki", countryOfOrigin: "Japan" },
+  { name: "ducati", displayName: "Ducati", countryOfOrigin: "Italy" },
+  { name: "aprilia", displayName: "Aprilia", countryOfOrigin: "Italy" },
+  { name: "mv-agusta", displayName: "MV Agusta", countryOfOrigin: "Italy" },
+  { name: "moto-guzzi", displayName: "Moto Guzzi", countryOfOrigin: "Italy" },
+  { name: "benelli", displayName: "Benelli", countryOfOrigin: "Italy" },
+  { name: "ktm", displayName: "KTM", countryOfOrigin: "Austria" },
+  { name: "husqvarna", displayName: "Husqvarna", countryOfOrigin: "Sweden" },
+  { name: "gas-gas", displayName: "Gas Gas", countryOfOrigin: "Spain" },
+  { name: "beta", displayName: "Beta", countryOfOrigin: "Italy" },
+  { name: "sherco", displayName: "Sherco", countryOfOrigin: "France" },
+  { name: "tm-racing", displayName: "TM Racing", countryOfOrigin: "Italy" },
+  { name: "ossa", displayName: "OSSA", countryOfOrigin: "Spain" },
+  { name: "montesa", displayName: "Montesa", countryOfOrigin: "Spain" },
+  { name: "bultaco", displayName: "Bultaco", countryOfOrigin: "Spain" },
+  { name: "derbi", displayName: "Derbi", countryOfOrigin: "Spain" },
+  { name: "rieju", displayName: "Rieju", countryOfOrigin: "Spain" },
+];
+
+// Category data
+const categories = [
+  // Level 0 - Main Categories
+  { name: "Cars", description: "Passenger vehicles", level: 0, sortOrder: 1 },
+  {
+    name: "Motorcycles",
+    description: "Two-wheeled vehicles",
+    level: 0,
+    sortOrder: 2,
+  },
+  {
+    name: "Trucks",
+    description: "Commercial vehicles",
+    level: 0,
+    sortOrder: 3,
+  },
+  {
+    name: "Buses",
+    description: "Public transport vehicles",
+    level: 0,
+    sortOrder: 4,
+  },
+  { name: "Trailers", description: "Towed vehicles", level: 0, sortOrder: 5 },
+  { name: "Boats", description: "Watercraft", level: 0, sortOrder: 6 },
+  { name: "Aircraft", description: "Flying vehicles", level: 0, sortOrder: 7 },
+  {
+    name: "Heavy Equipment",
+    description: "Construction and industrial vehicles",
+    level: 0,
+    sortOrder: 8,
+  },
+  {
+    name: "Recreational Vehicles",
+    description: "RV and camping vehicles",
+    level: 0,
+    sortOrder: 9,
+  },
+  {
+    name: "Classic & Vintage",
+    description: "Antique and classic vehicles",
+    level: 0,
+    sortOrder: 10,
+  },
+  {
+    name: "Electric Vehicles",
+    description: "EV and hybrid vehicles",
+    level: 0,
+    sortOrder: 11,
+  },
+  {
+    name: "Luxury Vehicles",
+    description: "High-end premium vehicles",
+    level: 0,
+    sortOrder: 12,
+  },
+  {
+    name: "Sports & Performance",
+    description: "High-performance vehicles",
+    level: 0,
+    sortOrder: 13,
+  },
+  {
+    name: "Off-Road Vehicles",
+    description: "4x4 and adventure vehicles",
+    level: 0,
+    sortOrder: 14,
+  },
+  {
+    name: "Commercial Vehicles",
+    description: "Business and work vehicles",
+    level: 0,
+    sortOrder: 15,
+  },
+  {
+    name: "Emergency Vehicles",
+    description: "Police, fire, ambulance",
+    level: 0,
+    sortOrder: 16,
+  },
+  {
+    name: "Military Vehicles",
+    description: "Defense and security vehicles",
+    level: 0,
+    sortOrder: 17,
+  },
+  {
+    name: "Agricultural Vehicles",
+    description: "Farming and agricultural equipment",
+    level: 0,
+    sortOrder: 18,
+  },
+  {
+    name: "Marine Vehicles",
+    description: "Boats and watercraft",
+    level: 0,
+    sortOrder: 19,
+  },
+  {
+    name: "Aviation Vehicles",
+    description: "Aircraft and flying machines",
+    level: 0,
+    sortOrder: 20,
+  },
+  {
+    name: "Space Vehicles",
+    description: "Rockets and space vehicles",
+    level: 0,
+    sortOrder: 21,
+  },
+  {
+    name: "Experimental Vehicles",
+    description: "Prototype and concept vehicles",
+    level: 0,
+    sortOrder: 22,
+  },
+  {
+    name: "Custom Vehicles",
+    description: "Modified and custom vehicles",
+    level: 0,
+    sortOrder: 23,
+  },
+  {
+    name: "Kit Vehicles",
+    description: "DIY and kit-built vehicles",
+    level: 0,
+    sortOrder: 24,
+  },
+  {
+    name: "Parts & Accessories",
+    description: "Vehicle parts and accessories",
+    level: 0,
+    sortOrder: 25,
+  },
+  {
+    name: "Services",
+    description: "Vehicle-related services",
+    level: 0,
+    sortOrder: 26,
+  },
+];
 
 const users = [
   {
@@ -53,7 +318,7 @@ const vehicles = [
     title: "2019 Toyota Camry XSE",
     description:
       "Excellent condition Toyota Camry with low mileage. Well maintained with full service history.",
-    brand: "Toyota",
+    brandName: "toyota", // We'll map this to brandId
     model: "Camry",
     year: 2019,
     mileage: 45000,
@@ -62,15 +327,24 @@ const vehicles = [
     price: 25000,
     location: "New York, NY",
     status: "available",
+    engineSize: "2.5L",
+    fuelType: "Gasoline",
+    transmission: "Automatic",
+    bodyStyle: "Sedan",
+    doors: 4,
+    seats: 5,
+    vin: "1HGBH41JXMN109186",
+    registrationNumber: "ABC123",
     aftermarketParts: ["LED Headlights", "Custom Wheels"],
     missingParts: null,
     images: ["camry1.jpg", "camry2.jpg", "camry3.jpg"],
+    categoryNames: ["Cars"], // We'll map this to categoryIds
   },
   {
     title: "2020 Honda Civic Sport",
     description:
       "Sporty Honda Civic with great fuel efficiency. Perfect for daily commuting.",
-    brand: "Honda",
+    brandName: "honda",
     model: "Civic",
     year: 2020,
     mileage: 32000,
@@ -79,15 +353,24 @@ const vehicles = [
     price: 22000,
     location: "Los Angeles, CA",
     status: "available",
+    engineSize: "1.5L Turbo",
+    fuelType: "Gasoline",
+    transmission: "CVT",
+    bodyStyle: "Sedan",
+    doors: 4,
+    seats: 5,
+    vin: "2T1BURHE0JC123456",
+    registrationNumber: "XYZ789",
     aftermarketParts: ["Sport Exhaust", "Lowering Springs"],
     missingParts: null,
     images: ["civic1.jpg", "civic2.jpg"],
+    categoryNames: ["Cars", "Sports & Performance"],
   },
   {
     title: "2018 BMW 3 Series",
     description:
       "Luxury BMW 3 Series with premium features. Leather interior and advanced technology.",
-    brand: "BMW",
+    brandName: "bmw",
     model: "3 Series",
     year: 2018,
     mileage: 55000,
@@ -96,15 +379,24 @@ const vehicles = [
     price: 35000,
     location: "Chicago, IL",
     status: "available",
+    engineSize: "2.0L Turbo",
+    fuelType: "Gasoline",
+    transmission: "Automatic",
+    bodyStyle: "Sedan",
+    doors: 4,
+    seats: 5,
+    vin: "3VWDX7AJ5DM123456",
+    registrationNumber: "DEF456",
     aftermarketParts: ["M Sport Package", "Premium Sound System"],
     missingParts: null,
     images: ["bmw1.jpg", "bmw2.jpg", "bmw3.jpg", "bmw4.jpg"],
+    categoryNames: ["Cars", "Luxury Vehicles"],
   },
   {
     title: "2021 Ford Mustang GT",
     description:
       "Powerful Ford Mustang GT with V8 engine. Perfect for car enthusiasts.",
-    brand: "Ford",
+    brandName: "ford",
     model: "Mustang",
     year: 2021,
     mileage: 18000,
@@ -113,6 +405,14 @@ const vehicles = [
     price: 45000,
     location: "Miami, FL",
     status: "available",
+    engineSize: "5.0L V8",
+    fuelType: "Gasoline",
+    transmission: "Manual",
+    bodyStyle: "Coupe",
+    doors: 2,
+    seats: 4,
+    vin: "4T1B11HK5JU123456",
+    registrationNumber: "GHI789",
     aftermarketParts: [
       "Performance Exhaust",
       "Cold Air Intake",
@@ -120,12 +420,13 @@ const vehicles = [
     ],
     missingParts: null,
     images: ["mustang1.jpg", "mustang2.jpg"],
+    categoryNames: ["Cars", "Sports & Performance"],
   },
   {
     title: "2017 Audi A4",
     description:
       "Elegant Audi A4 with quattro all-wheel drive. Premium German engineering.",
-    brand: "Audi",
+    brandName: "audi",
     model: "A4",
     year: 2017,
     mileage: 68000,
@@ -134,15 +435,24 @@ const vehicles = [
     price: 28000,
     location: "Seattle, WA",
     status: "available",
+    engineSize: "2.0L Turbo",
+    fuelType: "Gasoline",
+    transmission: "Automatic",
+    bodyStyle: "Sedan",
+    doors: 4,
+    seats: 5,
+    vin: "5NPE34AF5FH123456",
+    registrationNumber: "JKL012",
     aftermarketParts: ["S-Line Package"],
     missingParts: null,
     images: ["audi1.jpg", "audi2.jpg", "audi3.jpg"],
+    categoryNames: ["Cars", "Luxury Vehicles"],
   },
   {
     title: "2019 Mercedes-Benz C-Class",
     description:
       "Luxury Mercedes C-Class with advanced safety features and comfort.",
-    brand: "Mercedes-Benz",
+    brandName: "mercedes-benz",
     model: "C-Class",
     year: 2019,
     mileage: 42000,
@@ -151,15 +461,24 @@ const vehicles = [
     price: 38000,
     location: "New York, NY",
     status: "available",
+    engineSize: "2.0L Turbo",
+    fuelType: "Gasoline",
+    transmission: "Automatic",
+    bodyStyle: "Sedan",
+    doors: 4,
+    seats: 5,
+    vin: "6G1ZT51826L123456",
+    registrationNumber: "MNO345",
     aftermarketParts: ["AMG Line Package", "Panoramic Sunroof"],
     missingParts: null,
     images: ["mercedes1.jpg", "mercedes2.jpg"],
+    categoryNames: ["Cars", "Luxury Vehicles"],
   },
 ];
 
 async function seedDatabase() {
   try {
-    console.log("Starting database seeding...");
+    logger.info("Starting comprehensive database seeding...");
 
     // Initialize database connection
     await AppDataSource.initialize();
@@ -168,37 +487,99 @@ async function seedDatabase() {
     const vehicleRepository = AppDataSource.getRepository(Vehicle);
     const auctionRepository = AppDataSource.getRepository(Auction);
     const bidRepository = AppDataSource.getRepository(Bid);
+    const brandRepository = AppDataSource.getRepository(Brand);
+    const categoryRepository = AppDataSource.getRepository(Category);
+    const vehicleCategoryRepository =
+      AppDataSource.getRepository(VehicleCategory);
 
-    // Clear existing data (only if data exists)
-    console.log("Clearing existing data...");
+    // Clear existing data in correct order (respecting foreign key constraints)
+    logger.info("Clearing existing data...");
 
-    // Check if data exists before deleting
-    const bidCount = await bidRepository.count();
-    if (bidCount > 0) {
-      await bidRepository.clear();
-      console.log("Cleared bids");
+    // Use CASCADE to clear all related data at once
+    try {
+      await AppDataSource.query(
+        'TRUNCATE TABLE "bid", "auction", "vehicle_category", "vehicle", "user_interaction", "user", "category", "brand" CASCADE'
+      );
+      logger.info("Cleared all existing data");
+    } catch (error) {
+      logger.warn(
+        "Could not truncate with CASCADE, clearing tables individually..."
+      );
+
+      // Fallback: clear tables individually in correct order
+      const bidCount = await bidRepository.count();
+      if (bidCount > 0) {
+        await bidRepository.clear();
+        logger.info("Cleared bids");
+      }
+
+      const auctionCount = await auctionRepository.count();
+      if (auctionCount > 0) {
+        await auctionRepository.clear();
+        logger.info("Cleared auctions");
+      }
+
+      const vehicleCategoryCount = await vehicleCategoryRepository.count();
+      if (vehicleCategoryCount > 0) {
+        await vehicleCategoryRepository.clear();
+        logger.info("Cleared vehicle categories");
+      }
+
+      const vehicleCount = await vehicleRepository.count();
+      if (vehicleCount > 0) {
+        await vehicleRepository.clear();
+        logger.info("Cleared vehicles");
+      }
+
+      const userCount = await userRepository.count();
+      if (userCount > 0) {
+        await userRepository.clear();
+        logger.info("Cleared users");
+      }
+
+      const categoryCount = await categoryRepository.count();
+      if (categoryCount > 0) {
+        await categoryRepository.clear();
+        logger.info("Cleared categories");
+      }
+
+      const brandCount = await brandRepository.count();
+      if (brandCount > 0) {
+        await brandRepository.clear();
+        logger.info("Cleared brands");
+      }
     }
 
-    const auctionCount = await auctionRepository.count();
-    if (auctionCount > 0) {
-      await auctionRepository.clear();
-      console.log("Cleared auctions");
+    // Seed brands
+    logger.info("Seeding brands...");
+    const createdBrands = [];
+    for (const brandData of brands) {
+      const brand = brandRepository.create(brandData);
+      const savedBrand = await brandRepository.save(brand);
+      createdBrands.push(savedBrand);
+      logger.info(`Created brand: ${savedBrand.displayName}`);
     }
 
-    const vehicleCount = await vehicleRepository.count();
-    if (vehicleCount > 0) {
-      await vehicleRepository.clear();
-      console.log("Cleared vehicles");
+    // Create brand lookup map
+    const brandMap = new Map(createdBrands.map((brand) => [brand.name, brand]));
+
+    // Seed categories
+    logger.info("Seeding categories...");
+    const createdCategories = [];
+    for (const categoryData of categories) {
+      const category = categoryRepository.create(categoryData);
+      const savedCategory = await categoryRepository.save(category);
+      createdCategories.push(savedCategory);
+      logger.info(`Created category: ${savedCategory.name}`);
     }
 
-    const userCount = await userRepository.count();
-    if (userCount > 0) {
-      await userRepository.clear();
-      console.log("Cleared users");
-    }
+    // Create category lookup map
+    const categoryMap = new Map(
+      createdCategories.map((category) => [category.name, category])
+    );
 
     // Create users
-    console.log("Creating users...");
+    logger.info("Creating users...");
     const createdUsers = [];
     for (const userData of users) {
       const hashedPassword = await bcrypt.hash(userData.password, 10);
@@ -208,25 +589,71 @@ async function seedDatabase() {
       });
       const savedUser = await userRepository.save(user);
       createdUsers.push(savedUser);
-      console.log(`Created user: ${savedUser.name}`);
+      logger.info(`Created user: ${savedUser.name}`);
     }
 
-    // Create vehicles
-    console.log("Creating vehicles...");
+    // Create vehicles with proper brand relationships
+    logger.info("Creating vehicles...");
     const createdVehicles = [];
     for (let i = 0; i < vehicles.length; i++) {
       const vehicleData = vehicles[i];
+      const brand = brandMap.get(vehicleData.brandName);
+
+      if (!brand) {
+        logger.warn(
+          `Brand not found: ${vehicleData.brandName}, skipping vehicle: ${vehicleData.title}`
+        );
+        continue;
+      }
+
       const vehicle = vehicleRepository.create({
-        ...vehicleData,
+        title: vehicleData.title,
+        description: vehicleData.description,
+        model: vehicleData.model,
+        year: vehicleData.year,
+        mileage: vehicleData.mileage,
+        color: vehicleData.color,
+        condition: vehicleData.condition,
+        price: vehicleData.price,
+        location: vehicleData.location,
+        status: vehicleData.status,
+        engineSize: vehicleData.engineSize,
+        fuelType: vehicleData.fuelType,
+        transmission: vehicleData.transmission,
+        bodyStyle: vehicleData.bodyStyle,
+        doors: vehicleData.doors,
+        seats: vehicleData.seats,
+        vin: vehicleData.vin,
+        registrationNumber: vehicleData.registrationNumber,
+        aftermarketParts: vehicleData.aftermarketParts,
+        missingParts: vehicleData.missingParts,
+        images: vehicleData.images,
+        brand: brand,
         user: createdUsers[i % createdUsers.length], // Distribute vehicles among users
       });
+
       const savedVehicle = await vehicleRepository.save(vehicle);
       createdVehicles.push(savedVehicle);
-      console.log(`Created vehicle: ${savedVehicle.title}`);
+      logger.info(`Created vehicle: ${savedVehicle.title}`);
+
+      // Create vehicle-category relationships
+      for (const categoryName of vehicleData.categoryNames) {
+        const category = categoryMap.get(categoryName);
+        if (category) {
+          const vehicleCategory = vehicleCategoryRepository.create({
+            vehicle: savedVehicle,
+            category: category,
+          });
+          await vehicleCategoryRepository.save(vehicleCategory);
+          logger.info(
+            `Assigned category '${categoryName}' to vehicle: ${savedVehicle.title}`
+          );
+        }
+      }
     }
 
     // Create auctions
-    console.log("Creating auctions...");
+    logger.info("Creating auctions...");
     const createdAuctions = [];
     const auctionData = [
       {
@@ -259,11 +686,11 @@ async function seedDatabase() {
       });
       const savedAuction = await auctionRepository.save(auction);
       createdAuctions.push(savedAuction);
-      console.log(`Created auction for: ${savedAuction.vehicle.title}`);
+      logger.info(`Created auction for: ${savedAuction.vehicle.title}`);
     }
 
     // Create bids
-    console.log("Creating bids...");
+    logger.info("Creating bids...");
     const bidData = [
       { amount: 22500 },
       { amount: 23000 },
@@ -283,7 +710,7 @@ async function seedDatabase() {
         user: createdUsers[i % createdUsers.length],
       });
       const savedBid = await bidRepository.save(bid);
-      console.log(
+      logger.info(
         `Created bid: $${savedBid.amount} on auction ${savedBid.auction.id}`
       );
 
@@ -301,13 +728,55 @@ async function seedDatabase() {
       }
     }
 
-    console.log("Database seeding completed successfully!");
-    console.log(`Created ${createdUsers.length} users`);
-    console.log(`Created ${createdVehicles.length} vehicles`);
-    console.log(`Created ${createdAuctions.length} auctions`);
-    console.log(`Created ${bidData.length} bids`);
+    // Seed UserInteractions
+    logger.info("Creating user interactions...");
+    const userInteractionRepository =
+      AppDataSource.getRepository("UserInteraction");
+    const interactionTypes = ["view", "search", "bid", "favorite", "compare"];
+    const userInteractions = [];
+    for (let i = 0; i < createdUsers.length; i++) {
+      for (let j = 0; j < createdVehicles.length; j++) {
+        // Each user views and favorites each vehicle
+        userInteractions.push({
+          userId: createdUsers[i].id,
+          vehicleId: createdVehicles[j].id,
+          interactionType: "view",
+          metadata: { duration: Math.floor(Math.random() * 120) + 10 },
+        });
+        userInteractions.push({
+          userId: createdUsers[i].id,
+          vehicleId: createdVehicles[j].id,
+          interactionType: "favorite",
+          metadata: {},
+        });
+      }
+      // Each user does a search
+      userInteractions.push({
+        userId: createdUsers[i].id,
+        interactionType: "search",
+        metadata: {
+          searchQuery: "sedan",
+          priceRange: { min: 20000, max: 40000 },
+          location: "New York, NY",
+          filters: { color: "Silver" },
+        },
+      });
+    }
+    for (const interaction of userInteractions) {
+      await userInteractionRepository.save(interaction);
+    }
+    logger.info(`Created ${userInteractions.length} user interactions`);
+
+    logger.info("Database seeding completed successfully!");
+    logger.info(`Created ${createdUsers.length} users`);
+    logger.info(`Created ${createdVehicles.length} vehicles`);
+    logger.info(`Created ${createdAuctions.length} auctions`);
+    logger.info(`Created ${bidData.length} bids`);
+    logger.info(`Created ${createdBrands.length} brands`);
+    logger.info(`Created ${createdCategories.length} categories`);
   } catch (error) {
-    console.error("Error seeding database:", error);
+    logger.error("Error seeding database:", error);
+    throw error;
   } finally {
     await AppDataSource.destroy();
   }

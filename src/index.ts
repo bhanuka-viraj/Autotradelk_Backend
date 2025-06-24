@@ -8,6 +8,8 @@ import authRoutes from "./routes/auth.routes";
 import vehiclesRoutes from "./routes/vehicles.routes";
 import auctionsRoutes from "./routes/auctions.routes";
 import usersRoutes from "./routes/users.routes";
+import brandsRoutes from "./routes/brands.routes";
+import categoriesRoutes from "./routes/categories.routes";
 
 const logger = createServiceLogger("Server");
 
@@ -28,6 +30,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/vehicles", vehiclesRoutes);
 app.use("/api/auctions", auctionsRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/brands", brandsRoutes);
+app.use("/api/categories", categoriesRoutes);
 
 const PORT = process.env.PORT || 8080;
 const startServer = async () => {

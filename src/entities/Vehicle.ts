@@ -9,6 +9,8 @@ import {
 } from "typeorm";
 import { User } from "./User";
 import { Auction } from "./Auction";
+import { Brand } from "./Brand";
+import { VehicleCategory } from "./VehicleCategory";
 
 @Entity()
 export class Vehicle {
@@ -20,9 +22,6 @@ export class Vehicle {
 
   @Column()
   description!: string;
-
-  @Column()
-  brand!: string;
 
   @Column()
   model!: string;
@@ -48,6 +47,31 @@ export class Vehicle {
   @Column()
   status!: string;
 
+  // Enhanced specifications
+  @Column({ nullable: true })
+  engineSize!: string;
+
+  @Column({ nullable: true })
+  fuelType!: string;
+
+  @Column({ nullable: true })
+  transmission!: string;
+
+  @Column({ nullable: true })
+  bodyStyle!: string;
+
+  @Column({ nullable: true })
+  doors!: number;
+
+  @Column({ nullable: true })
+  seats!: number;
+
+  @Column({ nullable: true })
+  vin!: string;
+
+  @Column({ nullable: true })
+  registrationNumber!: string;
+
   @Column("json", { nullable: true })
   aftermarketParts!: string[] | null;
 
@@ -66,6 +90,15 @@ export class Vehicle {
   @ManyToOne(() => User, (user) => user.vehicles)
   user!: User;
 
+  @ManyToOne(() => Brand, (brand) => brand.vehicles)
+  brand!: Brand;
+
   @OneToMany(() => Auction, (auction) => auction.vehicle)
   auctions!: Auction[];
+
+  @OneToMany(
+    () => VehicleCategory,
+    (vehicleCategory) => vehicleCategory.vehicle
+  )
+  vehicleCategories!: VehicleCategory[];
 }

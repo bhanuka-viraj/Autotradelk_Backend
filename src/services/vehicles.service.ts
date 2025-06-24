@@ -5,7 +5,8 @@ import { createServiceLogger } from "../utils/logger.util";
 import { UserInteractionsService } from "./user-interactions.service";
 
 interface FindAllQuery {
-  brand?: string;
+  brandId?: number;
+  categoryIds?: number[];
   priceMin?: number;
   priceMax?: number;
   location?: string;
@@ -14,7 +15,8 @@ interface FindAllQuery {
 }
 
 interface SearchQuery {
-  brand?: string;
+  brandId?: number;
+  categoryIds?: number[];
   model?: string;
   priceMin?: number;
   priceMax?: number;
@@ -22,6 +24,11 @@ interface SearchQuery {
   mileageMax?: number;
   color?: string;
   condition?: string;
+  yearMin?: number;
+  yearMax?: number;
+  fuelType?: string;
+  transmission?: string;
+  bodyStyle?: string;
   page?: number;
   limit?: number;
 }
@@ -34,7 +41,7 @@ interface FindAllResponse {
 interface CreateVehicleData {
   title: string;
   description: string;
-  brand: string;
+  brandId: number;
   model: string;
   year: number;
   mileage: number;
@@ -43,9 +50,18 @@ interface CreateVehicleData {
   price: number;
   location: string;
   status: string;
+  engineSize?: string;
+  fuelType?: string;
+  transmission?: string;
+  bodyStyle?: string;
+  doors?: number;
+  seats?: number;
+  vin?: string;
+  registrationNumber?: string;
   aftermarketParts?: string[];
   missingParts?: string[];
   images: string[];
+  categoryIds?: number[];
   userId: number;
 }
 
@@ -54,7 +70,8 @@ export class VehiclesService {
   private userInteractionsService = new UserInteractionsService();
 
   async findAll({
-    brand,
+    brandId,
+    categoryIds,
     priceMin,
     priceMax,
     location,
@@ -62,7 +79,8 @@ export class VehiclesService {
     limit = 10,
   }: FindAllQuery): Promise<FindAllResponse> {
     this.logger.info("Find all vehicles request", {
-      brand,
+      brandId,
+      categoryIds,
       priceMin,
       priceMax,
       location,
@@ -73,11 +91,17 @@ export class VehiclesService {
     const vehicleRepository = AppDataSource.getRepository(Vehicle);
     const query = vehicleRepository
       .createQueryBuilder("vehicle")
+      .leftJoinAndSelect("vehicle.brand", "brand")
+      .leftJoinAndSelect("vehicle.vehicleCategories", "vehicleCategory")
+      .leftJoinAndSelect("vehicleCategory.category", "category")
       .where("vehicle.status = :status", { status: "available" })
       .skip((page - 1) * limit)
       .take(limit);
 
-    if (brand) query.andWhere("vehicle.brand = :brand", { brand });
+    if (brandId) query.andWhere("vehicle.brandId = :brandId", { brandId });
+    if (categoryIds && categoryIds.length > 0) {
+      query.andWhere("category.id IN (:...categoryIds)", { categoryIds });
+    }
     if (priceMin) query.andWhere("vehicle.price >= :priceMin", { priceMin });
     if (priceMax) query.andWhere("vehicle.price <= :priceMax", { priceMax });
     if (location) query.andWhere("vehicle.location = :location", { location });
@@ -100,7 +124,12 @@ export class VehiclesService {
     const vehicleRepository = AppDataSource.getRepository(Vehicle);
     const vehicle = await vehicleRepository.findOne({
       where: { id },
-      relations: ["user"],
+      relations: [
+        "user",
+        "brand",
+        "vehicleCategories",
+        "vehicleCategories.category",
+      ],
     });
 
     if (!vehicle) {
@@ -122,7 +151,10 @@ export class VehiclesService {
     });
 
     const vehicleRepository = AppDataSource.getRepository(Vehicle);
-    const vehicle = await vehicleRepository.findOne({ where: { id } });
+    const vehicle = await vehicleRepository.findOne({
+      where: { id },
+      relations: ["brand", "vehicleCategories", "vehicleCategories.category"],
+    });
 
     if (!vehicle) {
       this.logger.warn("Vehicle not found for suggestions", { vehicleId: id });
@@ -136,14 +168,17 @@ export class VehiclesService {
 
     const suggestions = await vehicleRepository
       .createQueryBuilder("vehicle")
+      .leftJoinAndSelect("vehicle.brand", "brand")
+      .leftJoinAndSelect("vehicle.vehicleCategories", "vehicleCategory")
+      .leftJoinAndSelect("vehicleCategory.category", "category")
       .where("vehicle.id != :id", { id })
       .andWhere("vehicle.status = :status", { status: "available" })
       .andWhere("vehicle.price BETWEEN :min AND :max", {
         min: priceRange.min,
         max: priceRange.max,
       })
-      .andWhere("vehicle.brand = :brand OR vehicle.model = :model", {
-        brand: vehicle.brand,
+      .andWhere("vehicle.brandId = :brandId OR vehicle.model = :model", {
+        brandId: vehicle.brand.id,
         model: vehicle.model,
       })
       .orderBy("vehicle.createdAt", "DESC")
@@ -335,7 +370,7 @@ export class VehiclesService {
   async create(data: CreateVehicleData): Promise<Vehicle> {
     this.logger.info("Create vehicle request", {
       userId: data.userId,
-      brand: data.brand,
+      brandId: data.brandId,
       model: data.model,
     });
 
@@ -343,7 +378,7 @@ export class VehiclesService {
     const vehicle = vehicleRepository.create({
       title: data.title,
       description: data.description,
-      brand: data.brand,
+      brand: { id: data.brandId },
       model: data.model,
       year: data.year,
       mileage: data.mileage,
@@ -352,6 +387,14 @@ export class VehiclesService {
       price: data.price,
       location: data.location,
       status: data.status,
+      engineSize: data.engineSize,
+      fuelType: data.fuelType,
+      transmission: data.transmission,
+      bodyStyle: data.bodyStyle,
+      doors: data.doors,
+      seats: data.seats,
+      vin: data.vin,
+      registrationNumber: data.registrationNumber,
       aftermarketParts: data.aftermarketParts || null,
       missingParts: data.missingParts || null,
       images: data.images,
@@ -369,7 +412,8 @@ export class VehiclesService {
   }
 
   async search({
-    brand,
+    brandId,
+    categoryIds,
     model,
     priceMin,
     priceMax,
@@ -377,11 +421,17 @@ export class VehiclesService {
     mileageMax,
     color,
     condition,
+    yearMin,
+    yearMax,
+    fuelType,
+    transmission,
+    bodyStyle,
     page = 1,
     limit = 10,
   }: SearchQuery): Promise<FindAllResponse> {
     this.logger.info("Search vehicles request", {
-      brand,
+      brandId,
+      categoryIds,
       model,
       priceMin,
       priceMax,
@@ -389,6 +439,11 @@ export class VehiclesService {
       mileageMax,
       color,
       condition,
+      yearMin,
+      yearMax,
+      fuelType,
+      transmission,
+      bodyStyle,
       page,
       limit,
     });
@@ -396,11 +451,17 @@ export class VehiclesService {
     const vehicleRepository = AppDataSource.getRepository(Vehicle);
     const query = vehicleRepository
       .createQueryBuilder("vehicle")
+      .leftJoinAndSelect("vehicle.brand", "brand")
+      .leftJoinAndSelect("vehicle.vehicleCategories", "vehicleCategory")
+      .leftJoinAndSelect("vehicleCategory.category", "category")
       .where("vehicle.status = :status", { status: "available" })
       .skip((page - 1) * limit)
       .take(limit);
 
-    if (brand) query.andWhere("vehicle.brand = :brand", { brand });
+    if (brandId) query.andWhere("vehicle.brandId = :brandId", { brandId });
+    if (categoryIds && categoryIds.length > 0) {
+      query.andWhere("category.id IN (:...categoryIds)", { categoryIds });
+    }
     if (model) query.andWhere("vehicle.model = :model", { model });
     if (priceMin) query.andWhere("vehicle.price >= :priceMin", { priceMin });
     if (priceMax) query.andWhere("vehicle.price <= :priceMax", { priceMax });
@@ -410,6 +471,13 @@ export class VehiclesService {
     if (color) query.andWhere("vehicle.color = :color", { color });
     if (condition)
       query.andWhere("vehicle.condition = :condition", { condition });
+    if (yearMin) query.andWhere("vehicle.year >= :yearMin", { yearMin });
+    if (yearMax) query.andWhere("vehicle.year <= :yearMax", { yearMax });
+    if (fuelType) query.andWhere("vehicle.fuelType = :fuelType", { fuelType });
+    if (transmission)
+      query.andWhere("vehicle.transmission = :transmission", { transmission });
+    if (bodyStyle)
+      query.andWhere("vehicle.bodyStyle = :bodyStyle", { bodyStyle });
 
     const [vehicles, total] = await query.getManyAndCount();
 
