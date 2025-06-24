@@ -1,11 +1,13 @@
-import logger from "../config/logger";
 import { createServiceLogger } from "../utils/logger.util";
 
+// Test basic logging
+const logger = createServiceLogger("TestLogger");
 logger.info("Testing basic logging functionality");
 logger.warn("This is a warning message");
 logger.error("This is an error message");
 logger.debug("This is a debug message");
 
+// Test service-specific logging
 const userServiceLogger = createServiceLogger("UserService");
 userServiceLogger.info("User authentication started");
 userServiceLogger.debug("Processing user data", {

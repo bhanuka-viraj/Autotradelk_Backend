@@ -9,6 +9,7 @@ import {
 import { Vehicle } from "./Vehicle";
 import { Auction } from "./Auction";
 import { Bid } from "./Bid";
+import { UserInteraction } from "./UserInteraction";
 
 @Entity()
 export class User {
@@ -21,7 +22,7 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
-  @Column({ nullable: true }) 
+  @Column({ nullable: true })
   password!: string;
 
   @Column({ nullable: true })
@@ -35,7 +36,6 @@ export class User {
 
   @Column({ nullable: true, unique: true })
   googleId!: string;
-
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -51,4 +51,7 @@ export class User {
 
   @OneToMany(() => Bid, (bid) => bid.user)
   bids!: Bid[];
+
+  @OneToMany(() => UserInteraction, (interaction) => interaction.user)
+  interactions!: UserInteraction[];
 }

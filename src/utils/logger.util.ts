@@ -1,4 +1,4 @@
-import logger from "../config/logger";
+import logger from "../config/logger.config";
 
 export const createServiceLogger = (serviceName: string) => {
   return {

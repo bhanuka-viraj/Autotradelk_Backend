@@ -1,13 +1,15 @@
 import "dotenv/config";
 import express, { Express } from "express";
 import cors from "cors";
-import { connectDB } from "./config/database";
-import logger from "./config/logger";
+import { connectDB } from "./config/database.config";
+import { createServiceLogger } from "./utils/logger.util";
 import morganMiddleware from "./middleware/logger.middleware";
 import authRoutes from "./routes/auth.routes";
 import vehiclesRoutes from "./routes/vehicles.routes";
 import auctionsRoutes from "./routes/auctions.routes";
 import usersRoutes from "./routes/users.routes";
+
+const logger = createServiceLogger("Server");
 
 const app: Express = express();
 
@@ -30,6 +32,7 @@ app.use("/api/users", usersRoutes);
 const PORT = process.env.PORT || 8080;
 const startServer = async () => {
   try {
+    logger.info("Starting server initialization...");
     await connectDB();
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);

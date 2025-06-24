@@ -1,9 +1,9 @@
 import { OAuth2Client } from "google-auth-library";
-import { AppDataSource } from "../config/database";
+import { AppDataSource } from "../config/database.config";
 import { User } from "../entities/User";
 import * as jwt from "jsonwebtoken";
 import * as bcrypt from "bcrypt";
-import logger from "../config/logger";
+import { createServiceLogger } from "../utils/logger.util";
 
 interface GoogleUserInfo {
   sub: string; // Google user ID
@@ -25,18 +25,21 @@ interface AuthResponse {
 
 export class GoogleAuthService {
   private googleClient: OAuth2Client;
+  private logger = createServiceLogger("GoogleAuthService");
 
   constructor() {
-    logger.info("GoogleAuthService constructor - Environment variables:");
-    logger.info(
+    this.logger.info("GoogleAuthService constructor - Environment variables:");
+    this.logger.info(
       `GOOGLE_CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? "SET" : "NOT SET"}`
     );
-    logger.info(
+    this.logger.info(
       `GOOGLE_CLIENT_SECRET: ${
         process.env.GOOGLE_CLIENT_SECRET ? "SET" : "NOT SET"
       }`
     );
-    logger.info(`JWT_SECRET: ${process.env.JWT_SECRET ? "SET" : "NOT SET"}`);
+    this.logger.info(
+      `JWT_SECRET: ${process.env.JWT_SECRET ? "SET" : "NOT SET"}`
+    );
 
     this.googleClient = new OAuth2Client(
       process.env.GOOGLE_CLIENT_ID,
@@ -46,9 +49,9 @@ export class GoogleAuthService {
 
   async verifyGoogleToken(idToken: string): Promise<GoogleUserInfo> {
     try {
-      logger.debug("Verifying Google token...");
-      logger.debug(`Token length: ${idToken.length}`);
-      logger.debug(`Token preview: ${idToken.substring(0, 50)}...`);
+      this.logger.debug("Verifying Google token...");
+      this.logger.debug(`Token length: ${idToken.length}`);
+      this.logger.debug(`Token preview: ${idToken.substring(0, 50)}...`);
 
       const ticket = await this.googleClient.verifyIdToken({
         idToken,
@@ -60,7 +63,7 @@ export class GoogleAuthService {
         throw new Error("Invalid Google token payload");
       }
 
-      logger.info(
+      this.logger.info(
         `Google token verified successfully for user: ${payload.email}`
       );
 
@@ -72,7 +75,7 @@ export class GoogleAuthService {
         email_verified: payload.email_verified!,
       };
     } catch (error) {
-      logger.error("Google token verification failed:", error);
+      this.logger.error("Google token verification failed:", error);
       throw new Error("Invalid Google token");
     }
   }
@@ -81,7 +84,7 @@ export class GoogleAuthService {
     authorizationCode: string
   ): Promise<{ idToken: string; accessToken: string }> {
     try {
-      logger.info("Exchanging authorization code for tokens...");
+      this.logger.info("Exchanging authorization code for tokens...");
 
       const { tokens } = await this.googleClient.getToken(authorizationCode);
 
@@ -89,13 +92,13 @@ export class GoogleAuthService {
         throw new Error("No ID token received from Google");
       }
 
-      logger.info("Successfully exchanged code for tokens");
+      this.logger.info("Successfully exchanged code for tokens");
       return {
         idToken: tokens.id_token,
         accessToken: tokens.access_token || "",
       };
     } catch (error) {
-      logger.error("Failed to exchange code for tokens:", error);
+      this.logger.error("Failed to exchange code for tokens:", error);
       throw new Error("Failed to exchange authorization code for tokens");
     }
   }
@@ -106,11 +109,13 @@ export class GoogleAuthService {
 
       // Check if it's an authorization code (starts with 4/)
       if (tokenOrCode.startsWith("4/")) {
-        logger.info("Detected authorization code, exchanging for tokens...");
+        this.logger.info(
+          "Detected authorization code, exchanging for tokens..."
+        );
         const tokens = await this.exchangeCodeForTokens(tokenOrCode);
         idToken = tokens.idToken;
       } else {
-        logger.info("Using provided ID token directly...");
+        this.logger.info("Using provided ID token directly...");
         idToken = tokenOrCode;
       }
 
@@ -123,13 +128,11 @@ export class GoogleAuthService {
 
       const userRepository = AppDataSource.getRepository(User);
 
-      // Check if user already exists
       let user = await userRepository.findOne({
         where: { email: googleUser.email },
       });
 
       if (!user) {
-        // Create new user
         user = userRepository.create({
           name: googleUser.name,
           email: googleUser.email,
@@ -139,7 +142,7 @@ export class GoogleAuthService {
         });
 
         await userRepository.save(user);
-        logger.info(`Created new user via Google: ${user.email}`);
+        this.logger.info(`Created new user via Google: ${user.email}`);
       }
 
       // Generate JWT token

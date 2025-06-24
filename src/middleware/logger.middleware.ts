@@ -1,5 +1,7 @@
 import morgan from "morgan";
-import logger from "../config/logger";
+import { createServiceLogger } from "../utils/logger.util";
+
+const logger = createServiceLogger("MorganMiddleware");
 
 const stream = {
   write: (message: string) => {

@@ -1,6 +1,8 @@
 import { DataSource } from "typeorm";
 import "dotenv/config";
-import logger from "./logger";
+import { createServiceLogger } from "../utils/logger.util";
+
+const logger = createServiceLogger("DatabaseService");
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -23,6 +25,7 @@ export const AppDataSource = new DataSource({
 export const connectDB = async (): Promise<DataSource> => {
   try {
     if (!AppDataSource.isInitialized) {
+      logger.info("Initializing database connection...");
       await AppDataSource.initialize();
       logger.info("Database connected successfully");
     }

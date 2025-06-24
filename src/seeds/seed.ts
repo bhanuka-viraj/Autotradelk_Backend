@@ -1,4 +1,4 @@
-import { AppDataSource } from "../config/database";
+import { AppDataSource } from "../config/database.config";
 import { User } from "../entities/User";
 import { Vehicle } from "../entities/Vehicle";
 import { Auction } from "../entities/Auction";

@@ -6,11 +6,13 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
+    "dev:prod": "NODE_ENV=production ts-node src/index.ts",
     "build": "tsc",
     "watch": "tsc -w",
     "seed": "ts-node src/seeds/seed.ts",
     "reset-db": "ts-node src/scripts/reset-db.ts",
-    "test-logging": "ts-node src/scripts/test-logging.ts"
+    "test-logging": "ts-node src/scripts/test-logging.ts",
+    "add-user-interactions": "ts-node src/scripts/add-user-interactions.ts"
   },
   "keywords": [],
   "author": "",
