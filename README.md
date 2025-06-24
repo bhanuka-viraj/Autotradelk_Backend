@@ -19,6 +19,10 @@ DB_NAME=autotradelk
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
 # Server Configuration
 PORT=3000
 NODE_ENV=development
@@ -54,6 +58,40 @@ npm run dev
 # Build and run production
 npm run build
 npm start
+```
+
+## Logging System
+
+The application uses Winston for structured logging and Morgan for HTTP request logging.
+
+### Log Levels
+
+- **error**: Critical errors that need immediate attention
+- **warn**: Warning messages for potential issues
+- **info**: General information about application flow
+- **http**: HTTP request/response logging
+- **debug**: Detailed debugging information (only in development)
+
+### Log Files
+
+- `logs/error.log`: Contains only error-level logs
+- `logs/combined.log`: Contains all log levels
+- Console: Colored output for development
+
+### Usage in Services
+
+```typescript
+import logger from "../config/logger";
+
+// Basic logging
+logger.info("User created successfully");
+logger.error("Database connection failed", error);
+logger.debug("Processing request data", { userId: 123 });
+
+// Service-specific logging
+import { createServiceLogger } from "../utils/logger.util";
+const serviceLogger = createServiceLogger("UserService");
+serviceLogger.info("User authentication completed");
 ```
 
 ## API Endpoints

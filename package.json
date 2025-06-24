@@ -9,7 +9,8 @@
     "build": "tsc",
     "watch": "tsc -w",
     "seed": "ts-node src/seeds/seed.ts",
-    "reset-db": "ts-node src/scripts/reset-db.ts"
+    "reset-db": "ts-node src/scripts/reset-db.ts",
+    "test-logging": "ts-node src/scripts/test-logging.ts"
   },
   "keywords": [],
   "author": "",
@@ -21,14 +22,17 @@
     "express": "^5.1.0",
     "google-auth-library": "^10.1.0",
     "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
     "pg": "^8.16.2",
-    "typeorm": "^0.3.25"
+    "typeorm": "^0.3.25",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
     "@types/node": "^22.15.32",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",

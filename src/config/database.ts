@@ -1,5 +1,6 @@
 import { DataSource } from "typeorm";
 import "dotenv/config";
+import logger from "./logger";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -9,7 +10,7 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD || "postgres",
   database: process.env.DB_NAME || "autotradelk",
   entities: ["src/entities/*.ts"],
-  synchronize: true, 
+  synchronize: true,
   logging: true,
   ssl: false,
   extra: {
@@ -23,11 +24,11 @@ export const connectDB = async (): Promise<DataSource> => {
   try {
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize();
-      console.log("Database connected successfully");
+      logger.info("Database connected successfully");
     }
     return AppDataSource;
   } catch (error) {
-    console.error("Database connection error:", error);
+    logger.error("Database connection error:", error);
     throw error;
   }
 };
