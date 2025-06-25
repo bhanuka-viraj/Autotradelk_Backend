@@ -11,6 +11,7 @@ import { User } from "./User";
 import { Auction } from "./Auction";
 import { Brand } from "./Brand";
 import { Category } from "./Category";
+import { Location } from "./Location";
 
 @Entity()
 export class Vehicle {
@@ -41,8 +42,11 @@ export class Vehicle {
   @Column("decimal")
   price!: number;
 
-  @Column()
-  location!: string;
+  @Column({ type: "int" })
+  locationId!: number;
+
+  @ManyToOne(() => Location, (location) => location.vehicles)
+  location!: Location;
 
   @Column()
   status!: string;

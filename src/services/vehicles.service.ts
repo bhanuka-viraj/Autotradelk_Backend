@@ -1,5 +1,6 @@
 import { AppDataSource } from "../config/database.config";
 import { Vehicle } from "../entities/Vehicle";
+import { Location } from "../entities/Location";
 import { In } from "typeorm";
 import { createServiceLogger } from "../utils/logger.util";
 import { UserInteractionsService } from "./user-interactions.service";
@@ -11,7 +12,7 @@ interface FindAllQuery {
   categoryId?: number;
   priceMin?: number;
   priceMax?: number;
-  location?: string;
+  locationId?: number;
   page?: number;
   limit?: number;
 }
@@ -22,7 +23,7 @@ interface SearchQuery {
   model?: string;
   priceMin?: number;
   priceMax?: number;
-  location?: string;
+  locationId?: number;
   mileageMax?: number;
   color?: string;
   condition?: string;
@@ -51,7 +52,7 @@ interface CreateVehicleData {
   color: string;
   condition: string;
   price: number;
-  location: string;
+  locationId: number;
   status: string;
   engineSize?: string;
   fuelType?: string;
@@ -71,12 +72,49 @@ export class VehiclesService {
   private logger = createServiceLogger("VehiclesService");
   private userInteractionsService = new UserInteractionsService();
 
+  // Helper function to format location hierarchy
+  private formatLocationHierarchy(location: Location | null): any {
+    if (!location) return null;
+
+    return {
+      id: location.id,
+      name: location.name,
+      nameSinhala: location.nameSinhala,
+      nameTamil: location.nameTamil,
+      type: location.type,
+      code: location.code,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      isActive: location.isActive,
+      sortOrder: location.sortOrder,
+      createdAt: location.createdAt,
+      updatedAt: location.updatedAt,
+      parent: this.formatLocationHierarchy(location.parent || null),
+    };
+  }
+
+  // Helper function to load complete location hierarchy
+  private async loadLocationHierarchy(
+    locationId: number
+  ): Promise<Location | null> {
+    if (!locationId) return null;
+
+    const locationRepository = AppDataSource.getRepository(Location);
+    return await locationRepository
+      .createQueryBuilder("location")
+      .leftJoinAndSelect("location.parent", "city")
+      .leftJoinAndSelect("city.parent", "district")
+      .leftJoinAndSelect("district.parent", "province")
+      .where("location.id = :id", { id: locationId })
+      .getOne();
+  }
+
   async findAll({
     brandId,
     categoryId,
     priceMin,
     priceMax,
-    location,
+    locationId,
     page = 1,
     limit = 10,
   }: FindAllQuery): Promise<FindAllResponse> {
@@ -85,7 +123,7 @@ export class VehiclesService {
       categoryId,
       priceMin,
       priceMax,
-      location,
+      locationId,
       page,
       limit,
     });
@@ -95,6 +133,10 @@ export class VehiclesService {
       .createQueryBuilder("vehicle")
       .leftJoinAndSelect("vehicle.brand", "brand")
       .leftJoinAndSelect("vehicle.category", "category")
+      .leftJoinAndSelect("vehicle.location", "location")
+      .leftJoinAndSelect("location.parent", "city")
+      .leftJoinAndSelect("city.parent", "district")
+      .leftJoinAndSelect("district.parent", "province")
       .where("vehicle.status = :status", { status: "available" })
       .skip((page - 1) * limit)
       .take(limit);
@@ -104,18 +146,25 @@ export class VehiclesService {
       query.andWhere("vehicle.categoryId = :categoryId", { categoryId });
     if (priceMin) query.andWhere("vehicle.price >= :priceMin", { priceMin });
     if (priceMax) query.andWhere("vehicle.price <= :priceMax", { priceMax });
-    if (location) query.andWhere("vehicle.location = :location", { location });
+    if (locationId)
+      query.andWhere("vehicle.locationId = :locationId", { locationId });
 
     const [vehicles, total] = await query.getManyAndCount();
 
+    // Format location hierarchy for each vehicle
+    const vehiclesWithHierarchy = vehicles.map((vehicle) => ({
+      ...vehicle,
+      location: this.formatLocationHierarchy(vehicle.location),
+    }));
+
     this.logger.info("Vehicles retrieved successfully", {
-      count: vehicles.length,
+      count: vehiclesWithHierarchy.length,
       total,
       page,
       limit,
     });
 
-    return { data: vehicles, meta: { total, page, limit } };
+    return { data: vehiclesWithHierarchy, meta: { total, page, limit } };
   }
 
   async findOne(id: number): Promise<Vehicle> {
@@ -128,8 +177,21 @@ export class VehiclesService {
       .createQueryBuilder("vehicle")
       .leftJoinAndSelect("vehicle.brand", "brand")
       .leftJoinAndSelect("vehicle.category", "category")
+      .leftJoinAndSelect("vehicle.location", "location")
+      .leftJoinAndSelect("location.parent", "city")
+      .leftJoinAndSelect("city.parent", "district")
+      .leftJoinAndSelect("district.parent", "province")
       .leftJoinAndSelect("vehicle.user", "user")
-      .select(["vehicle", "brand", "category", ...getUserSelectFields()])
+      .select([
+        "vehicle",
+        "brand",
+        "category",
+        "location",
+        "city",
+        "district",
+        "province",
+        ...getUserSelectFields(),
+      ])
       .where("vehicle.id = :id", { id })
       .getOne();
 
@@ -138,8 +200,14 @@ export class VehiclesService {
       throw ApiError.notFound("Vehicle");
     }
 
+    // Format location hierarchy
+    const vehicleWithHierarchy = {
+      ...vehicle,
+      location: this.formatLocationHierarchy(vehicle.location),
+    };
+
     this.logger.info("Vehicle retrieved successfully", { vehicleId: id });
-    return vehicle;
+    return vehicleWithHierarchy;
   }
 
   async getVehicleSuggestions(
@@ -171,6 +239,10 @@ export class VehiclesService {
       .createQueryBuilder("vehicle")
       .leftJoinAndSelect("vehicle.brand", "brand")
       .leftJoinAndSelect("vehicle.category", "category")
+      .leftJoinAndSelect("vehicle.location", "location")
+      .leftJoinAndSelect("location.parent", "city")
+      .leftJoinAndSelect("city.parent", "district")
+      .leftJoinAndSelect("district.parent", "province")
       .where("vehicle.id != :id", { id })
       .andWhere("vehicle.status = :status", { status: "available" })
       .andWhere("vehicle.price BETWEEN :min AND :max", {
@@ -185,12 +257,18 @@ export class VehiclesService {
       .take(limit)
       .getMany();
 
+    // Format location hierarchy for suggestions
+    const suggestionsWithHierarchy = suggestions.map((vehicle) => ({
+      ...vehicle,
+      location: this.formatLocationHierarchy(vehicle.location),
+    }));
+
     this.logger.info("Vehicle suggestions retrieved successfully", {
       vehicleId: id,
-      suggestionCount: suggestions.length,
+      suggestionCount: suggestionsWithHierarchy.length,
     });
 
-    return suggestions;
+    return suggestionsWithHierarchy;
   }
 
   async getUserSpecificSuggestions(
@@ -218,6 +296,10 @@ export class VehiclesService {
     // Build query based on user preferences
     const query = vehicleRepository
       .createQueryBuilder("vehicle")
+      .leftJoinAndSelect("vehicle.location", "location")
+      .leftJoinAndSelect("location.parent", "city")
+      .leftJoinAndSelect("city.parent", "district")
+      .leftJoinAndSelect("district.parent", "province")
       .where("vehicle.status = :status", { status: "available" })
       .andWhere("vehicle.id NOT IN (:...recentlyViewed)", {
         recentlyViewed: recentlyViewed.length > 0 ? recentlyViewed : [0],
@@ -253,7 +335,7 @@ export class VehiclesService {
 
     // Location preferences
     if (preferences.preferredLocations.length > 0) {
-      query.andWhere("vehicle.location IN (:...locations)", {
+      query.andWhere("vehicle.locationId IN (:...locations)", {
         locations: preferences.preferredLocations,
       });
       hasPreferences = true;
@@ -288,6 +370,10 @@ export class VehiclesService {
       // Get some popular vehicles as fallback
       const fallbackSuggestions = await vehicleRepository
         .createQueryBuilder("vehicle")
+        .leftJoinAndSelect("vehicle.location", "location")
+        .leftJoinAndSelect("location.parent", "city")
+        .leftJoinAndSelect("city.parent", "district")
+        .leftJoinAndSelect("district.parent", "province")
         .where("vehicle.status = :status", { status: "available" })
         .andWhere("vehicle.id NOT IN (:...recentlyViewed)", {
           recentlyViewed: recentlyViewed.length > 0 ? recentlyViewed : [0],
@@ -296,12 +382,18 @@ export class VehiclesService {
         .take(limit)
         .getMany();
 
+      // Format location hierarchy for fallback suggestions
+      const fallbackWithHierarchy = fallbackSuggestions.map((vehicle) => ({
+        ...vehicle,
+        location: this.formatLocationHierarchy(vehicle.location),
+      }));
+
       this.logger.info("Fallback suggestions retrieved", {
         userId,
-        suggestionCount: fallbackSuggestions.length,
+        suggestionCount: fallbackWithHierarchy.length,
       });
 
-      return fallbackSuggestions;
+      return fallbackWithHierarchy;
     }
 
     // Add scoring based on preference matches
@@ -317,7 +409,7 @@ export class VehiclesService {
         ELSE 0
       END +
       CASE 
-        WHEN vehicle.location IN (:...preferredLocations) THEN 5
+        WHEN vehicle.locationId IN (:...preferredLocations) THEN 5
         ELSE 0
       END +
       CASE 
@@ -337,13 +429,19 @@ export class VehiclesService {
 
     const suggestions = await query.getMany();
 
+    // Format location hierarchy for suggestions
+    const suggestionsWithHierarchy = suggestions.map((vehicle) => ({
+      ...vehicle,
+      location: this.formatLocationHierarchy(vehicle.location),
+    }));
+
     this.logger.info("User-specific suggestions retrieved successfully", {
       userId,
-      suggestionCount: suggestions.length,
+      suggestionCount: suggestionsWithHierarchy.length,
       hasPreferences,
     });
 
-    return suggestions;
+    return suggestionsWithHierarchy;
   }
 
   async compareVehicles(ids: number[]): Promise<Vehicle[]> {
@@ -354,8 +452,21 @@ export class VehiclesService {
       .createQueryBuilder("vehicle")
       .leftJoinAndSelect("vehicle.brand", "brand")
       .leftJoinAndSelect("vehicle.category", "category")
+      .leftJoinAndSelect("vehicle.location", "location")
+      .leftJoinAndSelect("location.parent", "city")
+      .leftJoinAndSelect("city.parent", "district")
+      .leftJoinAndSelect("district.parent", "province")
       .leftJoinAndSelect("vehicle.user", "user")
-      .select(["vehicle", "brand", "category", ...getUserSelectFields()])
+      .select([
+        "vehicle",
+        "brand",
+        "category",
+        "location",
+        "city",
+        "district",
+        "province",
+        ...getUserSelectFields(),
+      ])
       .where("vehicle.id IN (:...ids)", { ids })
       .getMany();
 
@@ -367,11 +478,17 @@ export class VehiclesService {
       throw ApiError.notFound("One or more vehicles");
     }
 
+    // Format location hierarchy for comparison
+    const vehiclesWithHierarchy = vehicles.map((vehicle) => ({
+      ...vehicle,
+      location: this.formatLocationHierarchy(vehicle.location),
+    }));
+
     this.logger.info("Vehicle comparison completed successfully", {
-      vehicleCount: vehicles.length,
+      vehicleCount: vehiclesWithHierarchy.length,
     });
 
-    return vehicles;
+    return vehiclesWithHierarchy;
   }
 
   async create(data: CreateVehicleData): Promise<Vehicle> {
@@ -395,7 +512,7 @@ export class VehiclesService {
       color: data.color,
       condition: data.condition,
       price: data.price,
-      location: data.location,
+      location: { id: data.locationId },
       status: data.status,
       engineSize: data.engineSize,
       fuelType: data.fuelType,
@@ -428,7 +545,7 @@ export class VehiclesService {
     model,
     priceMin,
     priceMax,
-    location,
+    locationId,
     mileageMax,
     color,
     condition,
@@ -446,7 +563,7 @@ export class VehiclesService {
       model,
       priceMin,
       priceMax,
-      location,
+      locationId,
       mileageMax,
       color,
       condition,
@@ -464,6 +581,10 @@ export class VehiclesService {
       .createQueryBuilder("vehicle")
       .leftJoinAndSelect("vehicle.brand", "brand")
       .leftJoinAndSelect("vehicle.category", "category")
+      .leftJoinAndSelect("vehicle.location", "location")
+      .leftJoinAndSelect("location.parent", "city")
+      .leftJoinAndSelect("city.parent", "district")
+      .leftJoinAndSelect("district.parent", "province")
       .where("vehicle.status = :status", { status: "available" })
       .skip((page - 1) * limit)
       .take(limit);
@@ -474,7 +595,8 @@ export class VehiclesService {
     if (model) query.andWhere("vehicle.model = :model", { model });
     if (priceMin) query.andWhere("vehicle.price >= :priceMin", { priceMin });
     if (priceMax) query.andWhere("vehicle.price <= :priceMax", { priceMax });
-    if (location) query.andWhere("vehicle.location = :location", { location });
+    if (locationId)
+      query.andWhere("vehicle.locationId = :locationId", { locationId });
     if (mileageMax)
       query.andWhere("vehicle.mileage <= :mileageMax", { mileageMax });
     if (color) query.andWhere("vehicle.color = :color", { color });
@@ -490,13 +612,19 @@ export class VehiclesService {
 
     const [vehicles, total] = await query.getManyAndCount();
 
+    // Format location hierarchy for search results
+    const vehiclesWithHierarchy = vehicles.map((vehicle) => ({
+      ...vehicle,
+      location: this.formatLocationHierarchy(vehicle.location),
+    }));
+
     this.logger.info("Vehicle search completed successfully", {
-      count: vehicles.length,
+      count: vehiclesWithHierarchy.length,
       total,
       page,
       limit,
     });
 
-    return { data: vehicles, meta: { total, page, limit } };
+    return { data: vehiclesWithHierarchy, meta: { total, page, limit } };
   }
 }

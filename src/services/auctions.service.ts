@@ -2,6 +2,7 @@ import { AppDataSource } from "../config/database.config";
 import { Auction } from "../entities/Auction";
 import { Bid } from "../entities/Bid";
 import { Vehicle } from "../entities/Vehicle";
+import { Location } from "../entities/Location";
 import { createServiceLogger } from "../utils/logger.util";
 import { getUserSelectFields } from "../utils/response.util";
 
@@ -11,7 +12,7 @@ interface FindAllQuery {
 }
 
 interface FindAllResponse {
-  data: Auction[];
+  data: AuctionWithHierarchy[];
   meta: { total: number; page: number; limit: number };
 }
 
@@ -27,8 +28,58 @@ interface CreateAuctionData {
   userId: number;
 }
 
+// Interface for formatted location hierarchy
+interface FormattedLocation {
+  id: number;
+  name: string;
+  nameSinhala?: string;
+  nameTamil?: string;
+  type: string;
+  code?: string;
+  latitude?: number;
+  longitude?: number;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+  parent: FormattedLocation | null;
+}
+
+// Interface for vehicle with formatted location
+interface VehicleWithHierarchy extends Omit<Vehicle, "location"> {
+  location: FormattedLocation | null;
+}
+
+// Interface for auction with formatted vehicle
+interface AuctionWithHierarchy extends Omit<Auction, "vehicle"> {
+  vehicle: VehicleWithHierarchy | null;
+}
+
 export class AuctionsService {
   private logger = createServiceLogger("AuctionsService");
+
+  // Helper function to format location hierarchy
+  private formatLocationHierarchy(
+    location: Location | null
+  ): FormattedLocation | null {
+    if (!location) return null;
+
+    return {
+      id: location.id,
+      name: location.name,
+      nameSinhala: location.nameSinhala,
+      nameTamil: location.nameTamil,
+      type: location.type,
+      code: location.code,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      isActive: location.isActive,
+      sortOrder: location.sortOrder,
+      createdAt: location.createdAt,
+      updatedAt: location.updatedAt,
+      parent: this.formatLocationHierarchy(location.parent || null),
+    };
+  }
 
   async findAll({
     page = 1,
@@ -40,35 +91,60 @@ export class AuctionsService {
     const query = auctionRepository
       .createQueryBuilder("auction")
       .leftJoinAndSelect("auction.vehicle", "vehicle")
+      .leftJoinAndSelect("vehicle.location", "location")
+      .leftJoinAndSelect("location.parent", "city")
+      .leftJoinAndSelect("city.parent", "district")
+      .leftJoinAndSelect("district.parent", "province")
       .where("auction.status = :status", { status: "active" })
       .skip((page - 1) * limit)
       .take(limit);
 
     const [auctions, total] = await query.getManyAndCount();
 
+    // Format location hierarchy for each auction's vehicle
+    const auctionsWithHierarchy: AuctionWithHierarchy[] = auctions.map(
+      (auction) => ({
+        ...auction,
+        vehicle: auction.vehicle
+          ? {
+              ...auction.vehicle,
+              location: this.formatLocationHierarchy(auction.vehicle.location),
+            }
+          : null,
+      })
+    );
+
     this.logger.info("Auctions retrieved successfully", {
-      count: auctions.length,
+      count: auctionsWithHierarchy.length,
       total,
       page,
       limit,
     });
 
-    return { data: auctions, meta: { total, page, limit } };
+    return { data: auctionsWithHierarchy, meta: { total, page, limit } };
   }
 
-  async findOne(id: number): Promise<Auction> {
+  async findOne(id: number): Promise<AuctionWithHierarchy> {
     this.logger.info("Find auction request", { auctionId: id });
 
     const auctionRepository = AppDataSource.getRepository(Auction);
     const auction = await auctionRepository
       .createQueryBuilder("auction")
       .leftJoinAndSelect("auction.vehicle", "vehicle")
+      .leftJoinAndSelect("vehicle.location", "location")
+      .leftJoinAndSelect("location.parent", "city")
+      .leftJoinAndSelect("city.parent", "district")
+      .leftJoinAndSelect("district.parent", "province")
       .leftJoinAndSelect("auction.user", "user")
       .leftJoinAndSelect("auction.bids", "bids")
       .leftJoinAndSelect("bids.user", "bidUser")
       .select([
         "auction",
         "vehicle",
+        "location",
+        "city",
+        "district",
+        "province",
         ...getUserSelectFields("user"),
         "bids",
         ...getUserSelectFields("bidUser"),
@@ -81,12 +157,23 @@ export class AuctionsService {
       throw new Error("Auction not found");
     }
 
+    // Format location hierarchy for the auction's vehicle
+    const auctionWithHierarchy: AuctionWithHierarchy = {
+      ...auction,
+      vehicle: auction.vehicle
+        ? {
+            ...auction.vehicle,
+            location: this.formatLocationHierarchy(auction.vehicle.location),
+          }
+        : null,
+    };
+
     this.logger.info("Auction retrieved successfully", {
       auctionId: id,
       bidCount: auction.bids?.length || 0,
     });
 
-    return auction;
+    return auctionWithHierarchy;
   }
 
   async createBid(auctionId: number, data: CreateBidData): Promise<Bid> {

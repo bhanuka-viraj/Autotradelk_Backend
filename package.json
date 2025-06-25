@@ -5,14 +5,22 @@
   "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "dev:prod": "NODE_ENV=production ts-node src/index.ts",
     "build": "tsc",
-    "watch": "tsc -w",
-    "seed": "ts-node src/seeds/seed.ts",
+    "test": "jest",
     "reset-db": "ts-node src/scripts/reset-db.ts",
     "test-logging": "ts-node src/scripts/test-logging.ts",
-    "add-user-interactions": "ts-node src/scripts/add-user-interactions.ts"
+    "add-user-interactions": "ts-node src/scripts/add-user-interactions.ts",
+    "db:init": "ts-node src/scripts/init-db.ts",
+    "db:seed-dev": "ts-node src/scripts/seed-dev.ts",
+    "db:seed-prod": "ts-node src/scripts/seed-prod.ts",
+    "db:seed-test": "ts-node src/scripts/seed-test.ts",
+    "db:check": "ts-node src/scripts/check-db.ts",
+    "db:reset": "ts-node src/scripts/reset-db.ts",
+    "db:setup": "npm run db:reset && npm run db:seed-dev",
+    "db:setup-prod": "npm run db:init && npm run db:seed-prod",
+    "db:setup-test": "npm run db:init && npm run db:seed-test"
   },
   "keywords": [],
   "author": "",
@@ -38,6 +46,7 @@
     "@types/node": "^22.15.32",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
     "typescript": "^5.8.3"
   }
 }
